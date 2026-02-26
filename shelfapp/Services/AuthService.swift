@@ -73,6 +73,8 @@ class AuthService {
         }
     }
 
+    // MARK: - Register
+    
     func signup(username: String, email: String, password: String, passwordRepeat: String) async throws {
         guard !username.isEmpty, !email.isEmpty, !password.isEmpty else {
             throw AuthError.invalidInput

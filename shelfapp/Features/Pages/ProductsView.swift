@@ -51,8 +51,7 @@ struct ProductsView: View {
                                 ForEach(categories, id: \.self) { category in
                                     Text(category).tag(Optional<String>(category))
                                 }
-                            }
-                            .pickerStyle(.segmented)
+                            }.padding(.horizontal, 16)
                             .listRowInsets(EdgeInsets())
                         }
 
@@ -118,6 +117,8 @@ struct ProductsView: View {
 
 struct ProductListRow: View {
     var product: Product
+    
+    @State private var isDrawing = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -125,19 +126,48 @@ struct ProductListRow: View {
                 .font(.headline)
                 .fontWeight(.semibold)
 
-            HStack(spacing: 12) {
+            HStack() {
                 if !product.category.isEmpty {
-                    Label(product.category, systemImage: "tag")
+                    Label {
+                        Text(product.category)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } icon: {
+                        Image(systemName: "tag.circle")
+                            .foregroundStyle(.yellow)
+                            .symbolEffect(.drawOn, isActive: isDrawing)
+                    }
+                }
+                else {
+                    Label {
+                        Text("Without category")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } icon: {
+                        Image(systemName: "tag.slash.fill")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 18, height: 18)
+                            .foregroundStyle(.red)
+                            .symbolEffect(.drawOn, isActive: isDrawing)
+                            
+                    }
+                }
+                Spacer()
+                Label {
+                    Text("\(product.expirationDaysDelta)d")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                } icon: {
+                    Image(systemName: "calendar")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 20, height: 20)
+                        .foregroundStyle(.purple)
                 }
-
-                Label(
-                    "\(product.expirationDaysDelta)d",
-                    systemImage: "calendar"
-                )
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            }.onAppear{
+                isDrawing = false
+                
             }
         }
         .padding(.vertical, 4)
@@ -149,6 +179,7 @@ struct CreateProductSheet: View {
     var onSave: (String, String, Int) -> Void
     @State private var name = ""
     @State private var category = ""
+    @State private var description = ""
     @State private var expirationDays = 7
 
     var body: some View {
@@ -157,8 +188,10 @@ struct CreateProductSheet: View {
                 Section("Product Details") {
                     TextField("Product Name", text: $name)
                         .textInputAutocapitalization(.words)
+                    TextField("Product Description", text: $description)
                     TextField("Category", text: $category)
                         .textInputAutocapitalization(.words)
+                    
                 }
 
                 Section("Expiration") {
