@@ -40,19 +40,6 @@ struct RootView: View {
                         Label(TabItem.home.rawValue, systemImage: TabItem.home.icon)
                     }
                     .tag(TabItem.home)
-
-                StoragesView()
-                    .tabItem {
-                        Label(TabItem.storages.rawValue, systemImage: TabItem.storages.icon)
-                    }
-                    .tag(TabItem.storages)
-
-                ProductsView()
-                    .tabItem {
-                        Label(TabItem.products.rawValue, systemImage: TabItem.products.icon)
-                    }
-                    .tag(TabItem.products)
-
                 NotificationsView()
                     .tabItem {
                         Label(TabItem.notifications.rawValue, systemImage: TabItem.notifications.icon)
