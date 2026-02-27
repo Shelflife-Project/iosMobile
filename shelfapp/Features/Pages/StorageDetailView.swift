@@ -5,13 +5,23 @@ struct StorageDetailView: View {
     @Environment(\.modelContext) var modelContext
     var storage: Storage
     @State private var showAddItem = false
+    @State private var showInviteSheet = false
     @State private var errorMessage: String?
     @State private var members: [StorageMemberInfo] = []
+    @State private var pendingInvites: [StorageMemberInfo] = []
     @State private var isLoadingMembers = false
     @State private var animateItems = true
 
     private var isOwner: Bool {
         storage.owner?.username == AuthManager.shared.currentUser?.username
+    }
+
+    private var acceptedMembers: [StorageMemberInfo] {
+        members.filter { $0.accepted }
+    }
+
+    private var invitedMembers: [StorageMemberInfo] {
+        members.filter { !$0.accepted }
     }
 
     var body: some View {
@@ -60,12 +70,12 @@ struct StorageDetailView: View {
                         ProgressView()
                         Spacer()
                     }
-                } else if members.isEmpty {
+                } else if acceptedMembers.isEmpty {
                     Text("No members")
                         .foregroundStyle(.secondary)
                         .font(.caption)
                 } else {
-                    ForEach(members) { member in
+                    ForEach(acceptedMembers) { member in
                         HStack(spacing: 12) {
                             Image(systemName: isOwnerMember(member) ? "crown.fill" : "person.fill")
                                 .foregroundStyle(isOwnerMember(member) ? .yellow : .cyan)
@@ -103,6 +113,43 @@ struct StorageDetailView: View {
                 }
             }
 
+            // Invited (pending) members section
+            if isOwner && !invitedMembers.isEmpty {
+                Section {
+                    ForEach(invitedMembers) { invite in
+                        HStack(spacing: 12) {
+                            Image(systemName: "envelope.fill")
+                                .foregroundStyle(.orange)
+                                .font(.system(size: 14))
+                                .frame(width: 24)
+
+                            Text(invite.username)
+                                .font(.body)
+
+                            Spacer()
+
+                            Text("Pending")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                        }
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) {
+                                cancelInvite(invite)
+                            } label: {
+                                Label("Cancel", systemImage: "xmark.circle")
+                            }
+                            .tint(.orange)
+                        }
+                    }
+                } header: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "envelope.badge.person.crop")
+                            .foregroundStyle(.orange)
+                        Text("Invited")
+                    }
+                }
+            }
+
             if storage.items.isEmpty && storage.shoppingItems.isEmpty && members.isEmpty && !isLoadingMembers {
                 VStack(alignment: .center, spacing: 12) {
                     Image(systemName: "tray")
@@ -133,6 +180,11 @@ struct StorageDetailView: View {
                     Button(action: { showAddItem = true }) {
                         Label("Add Item", systemImage: "plus")
                     }
+                    if isOwner {
+                        Button(action: { showInviteSheet = true }) {
+                            Label("Invite Member", systemImage: "person.badge.plus")
+                        }
+                    }
                 } label: {
                     Image(systemName: "plus.circle.fill")
                 }
@@ -142,6 +194,12 @@ struct StorageDetailView: View {
             AddItemSheet(
                 storage: storage,
                 isPresented: $showAddItem
+            )
+        }
+        .sheet(isPresented: $showInviteSheet) {
+            InviteMemberSheet(
+                isPresented: $showInviteSheet,
+                onInvite: { email in inviteMember(email: email) }
             )
         }
         .alert("Error", isPresented: .constant(errorMessage != nil)) {
@@ -208,6 +266,35 @@ struct StorageDetailView: View {
                 }
             } catch {
                 errorMessage = "Failed to remove member: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    private func inviteMember(email: String) {
+        guard let storageServerId = storage.serverId else { return }
+        Task {
+            do {
+                let invited = try await APIService.shared.inviteMember(storageId: storageServerId, email: email)
+                await MainActor.run {
+                    members.append(invited)
+                }
+            } catch {
+                errorMessage = "Failed to invite member: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    private func cancelInvite(_ invite: StorageMemberInfo) {
+        guard let storageServerId = storage.serverId else { return }
+        Task {
+            do {
+                // Cancelling an invite = removing the member entry
+                try await APIService.shared.removeMember(storageId: storageServerId, userId: invite.userId)
+                await MainActor.run {
+                    members.removeAll { $0.id == invite.id }
+                }
+            } catch {
+                errorMessage = "Failed to cancel invitation: \(error.localizedDescription)"
             }
         }
     }
@@ -358,6 +445,47 @@ struct AddItemSheet: View {
                 }
             } catch {
                 print("Failed to add item: \(error.localizedDescription)")
+            }
+        }
+    }
+}
+
+// MARK: - Invite Member Sheet
+
+struct InviteMemberSheet: View {
+    @Binding var isPresented: Bool
+    var onInvite: (String) -> Void
+    @State private var email = ""
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Invite by Email") {
+                    TextField("Email address", text: $email)
+                        .textInputAutocapitalization(.never)
+                        .keyboardType(.emailAddress)
+                        .autocorrectionDisabled()
+                }
+
+                Section {
+                    Text("The user will receive an invitation they can accept or decline.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .navigationTitle("Invite Member")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") { isPresented = false }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Send Invite") {
+                        onInvite(email)
+                        isPresented = false
+                    }
+                    .disabled(email.trimmingCharacters(in: .whitespaces).isEmpty || !email.contains("@"))
+                }
             }
         }
     }

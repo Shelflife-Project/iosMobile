@@ -301,13 +301,78 @@ class APIService {
 
         let decoder = JSONDecoder()
         let dtos = try decoder.decode([StorageMemberDTO].self, from: data)
-        return dtos.filter { $0.accepted }.map {
+        return dtos.map {
             StorageMemberInfo(id: $0.id, userId: $0.user.id, username: $0.user.username, accepted: $0.accepted)
         }
     }
 
+    func inviteMember(storageId: Int, email: String) async throws -> StorageMemberInfo {
+        guard let url = normalizeURL("api/storages/\(storageId)/members") else { throw APIError.invalidURL }
+
+        let payload: [String: Any] = ["email": email]
+        let jsonData = try JSONSerialization.data(withJSONObject: payload)
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = buildHeaders()
+        request.httpBody = jsonData
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validateResponse(response)
+
+        let decoder = JSONDecoder()
+        let dto = try decoder.decode(StorageMemberDTO.self, from: data)
+        return StorageMemberInfo(id: dto.id, userId: dto.user.id, username: dto.user.username, accepted: dto.accepted)
+    }
+
     func removeMember(storageId: Int, userId: Int) async throws {
         guard let url = normalizeURL("api/storages/\(storageId)/members/\(userId)") else { throw APIError.invalidURL }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.allHTTPHeaderFields = buildHeaders()
+
+        let (_, response) = try await URLSession.shared.data(for: request)
+        try validateResponse(response)
+    }
+
+    // MARK: - Invites API
+
+    func fetchPendingInvites() async throws -> [PendingInviteInfo] {
+        guard let url = normalizeURL("api/storages/invites") else { throw APIError.invalidURL }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.allHTTPHeaderFields = buildHeaders()
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validateResponse(response)
+
+        let decoder = JSONDecoder()
+        let dtos = try decoder.decode([StorageMemberDTO].self, from: data)
+        return dtos.map {
+            PendingInviteInfo(
+                id: $0.id,
+                storageName: $0.storage?.name ?? "Unknown",
+                storageId: $0.storage?.id ?? 0,
+                invitedBy: $0.storage?.owner?.username ?? "Unknown"
+            )
+        }
+    }
+
+    func acceptInvite(inviteId: Int) async throws {
+        guard let url = normalizeURL("api/storages/invites/\(inviteId)") else { throw APIError.invalidURL }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = buildHeaders()
+
+        let (_, response) = try await URLSession.shared.data(for: request)
+        try validateResponse(response)
+    }
+
+    func declineInvite(inviteId: Int) async throws {
+        guard let url = normalizeURL("api/storages/invites/\(inviteId)") else { throw APIError.invalidURL }
 
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
@@ -378,6 +443,14 @@ struct StorageMemberInfo: Identifiable {
     let userId: Int
     let username: String
     let accepted: Bool
+}
+
+/// Lightweight struct for pending invite display
+struct PendingInviteInfo: Identifiable {
+    let id: Int
+    let storageName: String
+    let storageId: Int
+    let invitedBy: String
 }
 
 struct ProductDTO: Codable {

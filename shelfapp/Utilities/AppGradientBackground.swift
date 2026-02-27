@@ -8,7 +8,7 @@ struct AppGradientBackground: ViewModifier {
             .background(
                 LinearGradient(
                     colors: colorScheme == .dark
-                        ? [Color(red: 0.15, green: 0.05, blue: 0.25), .black]
+                        ? [Color(red: 0.15, green: 0.05, blue: 0.25), Color(.systemBackground)]
                         : [Color(red: 0.93, green: 0.88, blue: 0.97), Color(.systemBackground)],
                     startPoint: .top,
                     endPoint: .bottom
