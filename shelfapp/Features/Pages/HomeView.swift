@@ -1,9 +1,16 @@
 import SwiftUI
 import SwiftData
 
+// MARK: - HomeView
+
 struct HomeView: View {
     @Environment(\.modelContext) var modelContext
     @Query var storages: [Storage]
+
+    // Animation states – staggered: box → list → cart
+    @State private var animateBox = true
+    @State private var animateList = true
+    @State private var animateCart = true
 
     var body: some View {
         NavigationStack {
@@ -20,70 +27,90 @@ struct HomeView: View {
                 .padding(.horizontal)
 
                 VStack(spacing: 16) {
-                    StatCard(
-                        title: "Total Storages",
-                        value: "\(storages.count)",
-                        icon: "cube.box.fill",
-                        color: .blue
-                    )
+                    // 1) Storages – shippingbox.fill wiggle
+                    NavigationLink(destination: StoragesView()) {
+                        StatCard(
+                            title: "Total Storages",
+                            value: "\(storages.count)",
+                            icon: "shippingbox.fill",
+                            color: .blue,
+                            animationStyle: .wiggle,
+                            isAnimating: animateBox
+                        )
+                    }
+                    .buttonStyle(.plain)
 
+                    // 2) Products – list.bullet.rectangle drawOn
                     let totalItems = storages.reduce(0) { $0 + $1.items.count }
-                    StatCard(
-                        title: "Items",
-                        value: "\(totalItems)",
-                        icon: "list.bullet",
-                        color: .green
-                    )
+                    NavigationLink(destination: ProductsView()) {
+                        StatCard(
+                            title: "Items",
+                            value: "\(totalItems)",
+                            icon: "list.bullet.rectangle",
+                            color: .green,
+                            animationStyle: .drawOn,
+                            isAnimating: animateList
+                        )
+                    }
+                    .buttonStyle(.plain)
 
+                    // 3) Shopping List – cart.fill drawOn
                     let totalShoppingItems = storages.reduce(0) { $0 + $1.shoppingItems.count }
-                    StatCard(
-                        title: "Shopping List",
-                        value: "\(totalShoppingItems)",
-                        icon: "cart.fill",
-                        color: .orange
-                    )
+                    NavigationLink(destination: ShoppingListView()) {
+                        StatCard(
+                            title: "Shopping List",
+                            value: "\(totalShoppingItems)",
+                            icon: "cart.fill",
+                            color: .orange,
+                            animationStyle: .drawOn,
+                            isAnimating: animateCart
+                        )
+                    }
+                    .buttonStyle(.plain)
                 }
                 .padding(.horizontal)
 
                 Spacer()
-
-                VStack(spacing: 12) {
-                    NavigationLink(destination: StoragesView()) {
-                        HStack {
-                            Image(systemName: "cube.box")
-                            Text("View Storages")
-                                .fontWeight(.semibold)
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.blue.opacity(0.1))
-                        .foregroundStyle(.blue)
-                        .cornerRadius(8)
-                    }
-
-                    NavigationLink(destination: ProductsView()) {
-                        HStack {
-                            Image(systemName: "cube")
-                            Text("View Products")
-                                .fontWeight(.semibold)
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.green.opacity(0.1))
-                        .foregroundStyle(.green)
-                        .cornerRadius(8)
-                    }
-                }
-                .padding(.horizontal)
-                .padding(.bottom)
             }
             .navigationTitle("Home")
+            .appGradientBackground()
+            .onAppear {
+                triggerStaggeredAnimations()
+            }
         }
     }
+
+    /// Fires animations in sequence: box → list → cart
+    private func triggerStaggeredAnimations() {
+        
+        // Step 1: box wiggle
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+            withAnimation(.easeInOut(duration: 0.6)) {
+                animateBox = false
+            }
+        }
+
+        // Step 2: list draws
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            withAnimation(.easeInOut(duration: 0.6)) {
+                animateList = false
+            }
+        }
+
+        // Step 3: cart draws
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+            withAnimation(.easeInOut(duration: 0.6)) {
+                animateCart = false
+            }
+        }
+    }
+}
+
+// MARK: - StatCard
+
+enum StatCardAnimation {
+    case wiggle
+    case drawOn
 }
 
 struct StatCard: View {
@@ -91,6 +118,8 @@ struct StatCard: View {
     let value: String
     let icon: String
     let color: Color
+    var animationStyle: StatCardAnimation = .drawOn
+    var isAnimating: Bool = false
 
     var body: some View {
         HStack(spacing: 16) {
@@ -100,6 +129,10 @@ struct StatCard: View {
                 .frame(width: 48, height: 48)
                 .background(color.opacity(0.1))
                 .cornerRadius(8)
+                .modifier(StatCardAnimationModifier(
+                    style: animationStyle,
+                    isAnimating: isAnimating
+                ))
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
@@ -111,10 +144,30 @@ struct StatCard: View {
             }
 
             Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
         }
         .padding()
-        .background(Color(.systemGray6))
+        .background(Color(.systemGray6).opacity(0.85))
         .cornerRadius(12)
+    }
+}
+
+struct StatCardAnimationModifier: ViewModifier {
+    let style: StatCardAnimation
+    let isAnimating: Bool
+
+    func body(content: Content) -> some View {
+        switch style {
+        case .wiggle:
+            content
+                .symbolEffect(.wiggle, isActive: isAnimating)
+        case .drawOn:
+            content
+                .symbolEffect(.drawOn, isActive: isAnimating)
+        }
     }
 }
 
