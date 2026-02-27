@@ -9,63 +9,129 @@ struct StoragesView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
 
+    // Animated icon states
+    @State private var animateBox = true
+    @State private var animateShared = true
+
+    private var currentUsername: String? {
+        AuthManager.shared.currentUser?.username
+    }
+
+    private var ownedStorages: [Storage] {
+        storages.filter { $0.owner?.username == currentUsername }
+    }
+
+    private var memberStorages: [Storage] {
+        storages.filter { $0.owner?.username != currentUsername }
+    }
+
     var body: some View {
-        NavigationStack {
-            Group {
-                if storages.isEmpty {
-                    VStack(spacing: 16) {
-                        Image(systemName: "cube.box")
-                            .font(.system(size: 48))
-                            .foregroundStyle(.gray)
-                        Text("No Storages")
-                            .font(.headline)
-                        Text("Create your first storage to get started")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Button(action: { showCreateForm = true }) {
-                            Label("Create Storage", systemImage: "plus.circle.fill")
-                                .fontWeight(.semibold)
-                        }
-                        .buttonStyle(.borderedProminent)
+        Group {
+            if storages.isEmpty {
+                VStack(spacing: 16) {
+                    Image(systemName: "shippingbox")
+                        .font(.system(size: 48))
+                        .foregroundStyle(.gray)
+                        .symbolEffect(.wiggle, isActive: animateBox)
+                    Text("No Storages")
+                        .font(.headline)
+                    Text("Create your first storage to get started")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Button(action: { showCreateForm = true }) {
+                        Label("Create Storage", systemImage: "plus.circle.fill")
+                            .fontWeight(.semibold)
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-                } else {
-                    List {
-                        ForEach(storages) { storage in
-                            NavigationLink(destination: StorageDetailView(storage: storage)) {
-                                StorageListRow(storage: storage)
+                    .buttonStyle(.borderedProminent)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            } else {
+                List {
+                    if !ownedStorages.isEmpty {
+                        Section {
+                            ForEach(ownedStorages) { storage in
+                                NavigationLink(destination: StorageDetailView(storage: storage)) {
+                                    StorageListRow(storage: storage, isOwner: true)
+                                }
+                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                    Button(role: .destructive) {
+                                        deleteStorage(storage)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                }
+                            }
+                        } header: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "crown.fill")
+                                    .foregroundStyle(.yellow)
+                                    .symbolEffect(.wiggle, isActive: animateBox)
+                                Text("My Storages")
                             }
                         }
-                        .onDelete { offsets in
-                            deleteStorages(offsets: offsets)
+                    }
+
+                    if !memberStorages.isEmpty {
+                        Section {
+                            ForEach(memberStorages) { storage in
+                                NavigationLink(destination: StorageDetailView(storage: storage)) {
+                                    StorageListRow(storage: storage, isOwner: false)
+                                }
+                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                    Button(role: .destructive) {
+                                        leaveStorage(storage)
+                                    } label: {
+                                        Label("Leave", systemImage: "rectangle.portrait.and.arrow.right")
+                                    }
+                                    .tint(.orange)
+                                }
+                            }
+                        } header: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "person.2.fill")
+                                    .foregroundStyle(.blue)
+                                    .symbolEffect(.drawOn, isActive: animateShared)
+                                Text("Shared with Me")
+                            }
                         }
                     }
                 }
+                .scrollContentBackground(.hidden)
             }
-            .navigationTitle("Storages")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    if !storages.isEmpty {
-                        EditButton()
-                    }
-                }
-                ToolbarItem(placement: .primaryAction) {
-                    Button(action: { showCreateForm = true }) {
-                        Image(systemName: "plus")
-                    }
+        }
+        .navigationTitle("Storages")
+        .appGradientBackground()
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button(action: { showCreateForm = true }) {
+                    Image(systemName: "plus")
                 }
             }
-            .sheet(isPresented: $showCreateForm) {
-                CreateStorageSheet(
-                    isPresented: $showCreateForm,
-                    onSave: createStorage
-                )
-            }
-            .alert("Error", isPresented: .constant(errorMessage != nil)) {
-                Button("OK") { errorMessage = nil }
-            } message: {
-                Text(errorMessage ?? "An unknown error occurred")
-            }
+        }
+        .sheet(isPresented: $showCreateForm) {
+            CreateStorageSheet(
+                isPresented: $showCreateForm,
+                onSave: createStorage
+            )
+        }
+        .alert("Error", isPresented: .constant(errorMessage != nil)) {
+            Button("OK") { errorMessage = nil }
+        } message: {
+            Text(errorMessage ?? "An unknown error occurred")
+        }
+        .onAppear {
+            triggerAnimations()
+        }
+    }
+
+    private func triggerAnimations() {
+        animateBox = true
+        animateShared = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            withAnimation(.easeInOut(duration: 0.6)) { animateBox = false }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            withAnimation(.easeInOut(duration: 0.6)) { animateShared = false }
         }
     }
 
@@ -73,14 +139,12 @@ struct StoragesView: View {
         isLoading = true
         Task {
             do {
-                // Try to sync with API first
-                let localStorage = Storage(name: name)
+                let localStorage = Storage(name: name, owner: AuthManager.shared.currentUser)
                 modelContext.insert(localStorage)
                 try modelContext.save()
                 newStorageName = ""
                 isLoading = false
 
-                // Attempt API sync in background
                 Task {
                     do {
                         _ = try await SyncService.shared.createStorageAndSync(name: name, in: modelContext)
@@ -95,49 +159,109 @@ struct StoragesView: View {
         }
     }
 
-    private func deleteStorages(offsets: IndexSet) {
-        for index in offsets {
-            let storage = storages[index]
-            Task {
-                do {
-                    try await SyncService.shared.deleteStorageAndSync(storage, in: modelContext)
-                } catch {
-                    errorMessage = "Failed to delete storage: \(error.localizedDescription)"
-                }
+    private func deleteStorage(_ storage: Storage) {
+        Task {
+            do {
+                try await SyncService.shared.deleteStorageAndSync(storage, in: modelContext)
+            } catch {
+                errorMessage = "Failed to delete storage: \(error.localizedDescription)"
             }
-            modelContext.delete(storage)
         }
+        modelContext.delete(storage)
+    }
+
+    private func leaveStorage(_ storage: Storage) {
+        Task {
+            do {
+                // Same endpoint - backend handles leave vs delete based on role
+                try await SyncService.shared.deleteStorageAndSync(storage, in: modelContext)
+            } catch {
+                errorMessage = "Failed to leave storage: \(error.localizedDescription)"
+            }
+        }
+        modelContext.delete(storage)
     }
 }
+
+// MARK: - Storage List Row
 
 struct StorageListRow: View {
     var storage: Storage
+    var isOwner: Bool
+
+    @State private var animateIcon = true
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(storage.name)
-                .font(.headline)
-                .fontWeight(.semibold)
+        HStack(spacing: 12) {
+            // Role icon
+            ZStack(alignment: .bottomTrailing) {
+                Image(systemName: "shippingbox.fill")
+                    .font(.system(size: 24))
+                    .foregroundStyle(isOwner ? .blue : .purple)
+                    .symbolEffect(.drawOn, isActive: animateIcon)
 
-            HStack(spacing: 12) {
-                Label(
-                    "\(storage.items.count) items",
-                    systemImage: "list.bullet"
-                )
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                // Owner crown or member person badge
+                if isOwner {
+                    Image(systemName: "crown.fill")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.yellow)
+                        .symbolEffect(.wiggle, isActive: animateIcon)
+                        .offset(x: 4, y: 4)
+                } else {
+                    Image(systemName: "person.fill")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.cyan)
+                        .offset(x: 4, y: 4)
+                }
+            }
+            .frame(width: 36, height: 36)
 
-                Label(
-                    "\(storage.shoppingItems.count) to buy",
-                    systemImage: "cart"
-                )
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Text(storage.name)
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                }
+
+                HStack(spacing: 12) {
+                    Label(
+                        "\(storage.items.count) items",
+                        systemImage: "list.bullet"
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                    if !isOwner, let ownerName = storage.owner?.username {
+                        Label(ownerName, systemImage: "person")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
+            Spacer()
+
+            // Red badge for toBuy items
+            if storage.shoppingItems.count > 0 {
+                Text("\(storage.shoppingItems.count)")
+                    .font(.caption2)
+                    .fontWeight(.bold)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(.red))
             }
         }
         .padding(.vertical, 4)
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                withAnimation(.easeInOut(duration: 0.5)) { animateIcon = false }
+            }
+        }
     }
 }
+
+// MARK: - Create Storage Sheet
 
 struct CreateStorageSheet: View {
     @Binding var isPresented: Bool

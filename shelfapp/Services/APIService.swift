@@ -287,6 +287,36 @@ class APIService {
         try validateResponse(response)
     }
 
+    // MARK: - Storage Members API
+
+    func fetchMembers(storageId: Int) async throws -> [StorageMemberInfo] {
+        guard let url = normalizeURL("api/storages/\(storageId)/members") else { throw APIError.invalidURL }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.allHTTPHeaderFields = buildHeaders()
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validateResponse(response)
+
+        let decoder = JSONDecoder()
+        let dtos = try decoder.decode([StorageMemberDTO].self, from: data)
+        return dtos.filter { $0.accepted }.map {
+            StorageMemberInfo(id: $0.id, userId: $0.user.id, username: $0.user.username, accepted: $0.accepted)
+        }
+    }
+
+    func removeMember(storageId: Int, userId: Int) async throws {
+        guard let url = normalizeURL("api/storages/\(storageId)/members/\(userId)") else { throw APIError.invalidURL }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.allHTTPHeaderFields = buildHeaders()
+
+        let (_, response) = try await URLSession.shared.data(for: request)
+        try validateResponse(response)
+    }
+
     // MARK: - Response Validation
 
     private func validateResponse(_ response: URLResponse) throws {
@@ -319,7 +349,7 @@ struct StorageDTO: Codable {
     let owner: UserDTO?
 
     func toDomain() -> Storage {
-        Storage(name: name, owner: owner?.toDomain())
+        Storage(name: name, owner: owner?.toDomain(), serverId: id)
     }
 }
 
@@ -329,8 +359,25 @@ struct UserDTO: Codable {
     let admin: Bool
 
     func toDomain() -> User {
-        User(username: username, admin: admin)
+        User(username: username, admin: admin, serverId: id)
     }
+}
+
+// MARK: - Storage Member DTO
+
+struct StorageMemberDTO: Codable {
+    let id: Int
+    let storage: StorageDTO?
+    let user: UserDTO
+    let accepted: Bool
+}
+
+/// Lightweight struct for member display (not a SwiftData model)
+struct StorageMemberInfo: Identifiable {
+    let id: Int
+    let userId: Int
+    let username: String
+    let accepted: Bool
 }
 
 struct ProductDTO: Codable {

@@ -6,32 +6,104 @@ struct StorageDetailView: View {
     var storage: Storage
     @State private var showAddItem = false
     @State private var errorMessage: String?
+    @State private var members: [StorageMemberInfo] = []
+    @State private var isLoadingMembers = false
+    @State private var animateItems = true
+
+    private var isOwner: Bool {
+        storage.owner?.username == AuthManager.shared.currentUser?.username
+    }
 
     var body: some View {
         List {
             if !storage.items.isEmpty {
-                Section("Items in Storage") {
+                Section {
                     ForEach(storage.items) { item in
                         ItemRow(item: item)
                     }
                     .onDelete { offsets in
                         deleteItems(offsets: offsets)
                     }
+                } header: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "tray.full.fill")
+                            .foregroundStyle(.blue)
+                            .symbolEffect(.drawOn, isActive: animateItems)
+                        Text("Items in Storage")
+                    }
                 }
             }
-            
+
             if !storage.shoppingItems.isEmpty {
-                Section("Shopping List") {
+                Section {
                     ForEach(storage.shoppingItems) { item in
                         ShoppingItemRow(item: item)
                     }
                     .onDelete { offsets in
                         deleteShoppingItems(offsets: offsets)
                     }
+                } header: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "cart.fill")
+                            .foregroundStyle(.orange)
+                            .symbolEffect(.drawOn, isActive: animateItems)
+                        Text("Shopping List")
+                    }
                 }
             }
-            
-            if storage.items.isEmpty && storage.shoppingItems.isEmpty {
+
+            // Members section
+            Section {
+                if isLoadingMembers {
+                    HStack {
+                        Spacer()
+                        ProgressView()
+                        Spacer()
+                    }
+                } else if members.isEmpty {
+                    Text("No members")
+                        .foregroundStyle(.secondary)
+                        .font(.caption)
+                } else {
+                    ForEach(members) { member in
+                        HStack(spacing: 12) {
+                            Image(systemName: isOwnerMember(member) ? "crown.fill" : "person.fill")
+                                .foregroundStyle(isOwnerMember(member) ? .yellow : .cyan)
+                                .font(.system(size: 14))
+                                .frame(width: 24)
+
+                            Text(member.username)
+                                .font(.body)
+
+                            Spacer()
+
+                            if isOwnerMember(member) {
+                                Text("Owner")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .swipeActions(edge: .trailing) {
+                            if isOwner && !isOwnerMember(member) {
+                                Button(role: .destructive) {
+                                    removeMember(member)
+                                } label: {
+                                    Label("Remove", systemImage: "person.badge.minus")
+                                }
+                            }
+                        }
+                    }
+                }
+            } header: {
+                HStack(spacing: 6) {
+                    Image(systemName: "person.2.fill")
+                        .foregroundStyle(.purple)
+                        .symbolEffect(.drawOn, isActive: animateItems)
+                    Text("Members")
+                }
+            }
+
+            if storage.items.isEmpty && storage.shoppingItems.isEmpty && members.isEmpty && !isLoadingMembers {
                 VStack(alignment: .center, spacing: 12) {
                     Image(systemName: "tray")
                         .font(.system(size: 40))
@@ -46,6 +118,8 @@ struct StorageDetailView: View {
                 .padding()
             }
         }
+        .scrollContentBackground(.hidden)
+        .appGradientBackground()
         .navigationTitle(storage.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -75,7 +149,70 @@ struct StorageDetailView: View {
         } message: {
             Text(errorMessage ?? "An unknown error occurred")
         }
+        .onAppear {
+            fetchMembers()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                withAnimation(.easeInOut(duration: 0.6)) { animateItems = false }
+            }
+        }
     }
+
+    // MARK: - Helpers
+
+    private func isOwnerMember(_ member: StorageMemberInfo) -> Bool {
+        member.userId == storage.owner?.serverId
+    }
+
+    // MARK: - Member API
+
+    private func fetchMembers() {
+        guard let storageServerId = storage.serverId else { return }
+        isLoadingMembers = true
+        Task {
+            do {
+                let fetched = try await APIService.shared.fetchMembers(storageId: storageServerId)
+                await MainActor.run {
+                    members = fetched
+                    // Ensure the owner is listed at the top even if not in members list
+                    if let ownerId = storage.owner?.serverId,
+                       !members.contains(where: { $0.userId == ownerId }),
+                       let ownerName = storage.owner?.username {
+                        members.insert(
+                            StorageMemberInfo(id: -1, userId: ownerId, username: ownerName, accepted: true),
+                            at: 0
+                        )
+                    }
+                    isLoadingMembers = false
+                }
+            } catch {
+                await MainActor.run {
+                    // If API fails, show at least the owner
+                    if let ownerId = storage.owner?.serverId,
+                       let ownerName = storage.owner?.username {
+                        members = [StorageMemberInfo(id: -1, userId: ownerId, username: ownerName, accepted: true)]
+                    }
+                    isLoadingMembers = false
+                }
+                print("Failed to fetch members: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func removeMember(_ member: StorageMemberInfo) {
+        guard let storageServerId = storage.serverId else { return }
+        Task {
+            do {
+                try await APIService.shared.removeMember(storageId: storageServerId, userId: member.userId)
+                await MainActor.run {
+                    members.removeAll { $0.id == member.id }
+                }
+            } catch {
+                errorMessage = "Failed to remove member: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    // MARK: - Item Deletion
 
     private func deleteItems(offsets: IndexSet) {
         for index in offsets {
