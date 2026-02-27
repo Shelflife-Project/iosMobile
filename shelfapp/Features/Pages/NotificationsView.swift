@@ -1,6 +1,8 @@
 import SwiftUI
+import SwiftData
 
 struct NotificationsView: View {
+    @Environment(\.modelContext) var modelContext
     @State private var invites: [PendingInviteInfo] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
@@ -131,6 +133,8 @@ struct NotificationsView: View {
         Task {
             do {
                 try await APIService.shared.acceptInvite(inviteId: invite.id)
+                // Sync storages so the newly joined storage appears
+                try? await SyncService.shared.syncStorages(in: modelContext)
                 await MainActor.run {
                     withAnimation { invites.removeAll { $0.id == invite.id } }
                 }
