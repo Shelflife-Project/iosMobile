@@ -26,6 +26,26 @@ class SyncService {
         }
     }
 
+    // MARK: - Product Sync
+
+    func syncProducts(in context: ModelContext) async throws {
+        do {
+            let remoteProducts = try await apiService.fetchProducts()
+
+            // Clear local products and insert remote ones
+            try context.delete(model: Product.self)
+
+            for remoteProduct in remoteProducts {
+                context.insert(remoteProduct)
+            }
+
+            try context.save()
+        } catch {
+            print("Failed to sync products: \(error.localizedDescription)")
+            throw error
+        }
+    }
+
     func syncStorageItems(for storage: Storage, in context: ModelContext) async throws {
         guard let storageId = storage.serverId else {
             print("Cannot sync items: storage has no serverId")

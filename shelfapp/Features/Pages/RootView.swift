@@ -80,7 +80,8 @@ struct RootView: View {
         }
 
         do {
-            // Attempt to sync storages from API
+            // Sync products and storages from API
+            try await SyncService.shared.syncProducts(in: modelContext)
             try await SyncService.shared.syncStorages(in: modelContext)
         } catch {
             print("Sync failed (using local data): \(error.localizedDescription)")

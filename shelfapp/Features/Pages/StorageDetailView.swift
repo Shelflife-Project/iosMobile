@@ -209,6 +209,7 @@ struct StorageDetailView: View {
         }
         .onAppear {
             fetchMembers()
+            syncItems()
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 withAnimation(.easeInOut(duration: 0.6)) { animateItems = false }
             }
@@ -219,6 +220,18 @@ struct StorageDetailView: View {
 
     private func isOwnerMember(_ member: StorageMemberInfo) -> Bool {
         member.userId == storage.owner?.serverId
+    }
+
+    // MARK: - Item Sync
+
+    private func syncItems() {
+        Task {
+            do {
+                try await SyncService.shared.syncStorageItems(for: storage, in: modelContext)
+            } catch {
+                print("Failed to sync items: \(error.localizedDescription)")
+            }
+        }
     }
 
     // MARK: - Member API
