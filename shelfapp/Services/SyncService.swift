@@ -27,8 +27,11 @@ class SyncService {
     }
 
     func syncStorageItems(for storage: Storage, in context: ModelContext) async throws {
+        guard let storageId = storage.serverId else {
+            print("Cannot sync items: storage has no serverId")
+            return
+        }
         do {
-            let storageId = storage.id.uuidString
             let remoteItems = try await apiService.fetchStorageItems(storageId: storageId)
 
             // Clear local storage items and insert remote ones
@@ -80,9 +83,13 @@ class SyncService {
         expiresAt: Date?,
         in context: ModelContext
     ) async throws -> StorageItem {
+        guard let storageId = storage.serverId else {
+            throw APIError.invalidURL
+        }
+        guard let productId = product.serverId else {
+            throw APIError.invalidURL
+        }
         do {
-            let storageId = storage.id.uuidString
-            let productId = product.id.uuidString
             let remoteItem = try await apiService.addStorageItem(
                 storageId: storageId,
                 productId: productId,
@@ -103,9 +110,13 @@ class SyncService {
         amountToBuy: Int,
         in context: ModelContext
     ) async throws -> ShoppingListItem {
+        guard let storageId = storage.serverId else {
+            throw APIError.invalidURL
+        }
+        guard let productId = product.serverId else {
+            throw APIError.invalidURL
+        }
         do {
-            let storageId = storage.id.uuidString
-            let productId = product.id.uuidString
             let remoteItem = try await apiService.addShoppingItem(
                 storageId: storageId,
                 productId: productId,
@@ -123,8 +134,13 @@ class SyncService {
     // MARK: - Delete Operations
 
     func deleteStorageAndSync(_ storage: Storage, in context: ModelContext) async throws {
+        guard let storageId = storage.serverId else {
+            // No serverId means it was never synced — just delete locally
+            context.delete(storage)
+            try context.save()
+            return
+        }
         do {
-            let storageId = storage.id.uuidString
             try await apiService.deleteStorage(id: storageId)
             context.delete(storage)
             try context.save()
@@ -135,9 +151,13 @@ class SyncService {
     }
 
     func deleteStorageItemAndSync(_ item: StorageItem, from storage: Storage, in context: ModelContext) async throws {
+        guard let storageId = storage.serverId, let itemId = item.serverId else {
+            // No serverId means it was never synced — just delete locally
+            storage.items.removeAll { $0.id == item.id }
+            try context.save()
+            return
+        }
         do {
-            let storageId = storage.id.uuidString
-            let itemId = item.id.uuidString
             try await apiService.deleteStorageItem(storageId: storageId, itemId: itemId)
             storage.items.removeAll { $0.id == item.id }
             try context.save()
@@ -148,9 +168,12 @@ class SyncService {
     }
 
     func deleteShoppingItemAndSync(_ item: ShoppingListItem, from storage: Storage, in context: ModelContext) async throws {
+        guard let storageId = storage.serverId, let itemId = item.serverId else {
+            storage.shoppingItems.removeAll { $0.id == item.id }
+            try context.save()
+            return
+        }
         do {
-            let storageId = storage.id.uuidString
-            let itemId = item.id.uuidString
             try await apiService.deleteShoppingItem(storageId: storageId, itemId: itemId)
             storage.shoppingItems.removeAll { $0.id == item.id }
             try context.save()

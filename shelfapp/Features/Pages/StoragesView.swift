@@ -139,23 +139,22 @@ struct StoragesView: View {
         isLoading = true
         Task {
             do {
-                let localStorage = Storage(name: name, owner: AuthManager.shared.currentUser)
-                modelContext.insert(localStorage)
-                try modelContext.save()
+                // Try API first — returns a storage with serverId
+                _ = try await SyncService.shared.createStorageAndSync(name: name, in: modelContext)
                 newStorageName = ""
-                isLoading = false
-
-                Task {
-                    do {
-                        _ = try await SyncService.shared.createStorageAndSync(name: name, in: modelContext)
-                    } catch {
-                        print("API sync failed (local storage created): \(error.localizedDescription)")
-                    }
-                }
             } catch {
-                errorMessage = "Failed to create storage: \(error.localizedDescription)"
-                isLoading = false
+                // API failed — create locally without serverId
+                do {
+                    let localStorage = Storage(name: name, owner: AuthManager.shared.currentUser)
+                    modelContext.insert(localStorage)
+                    try modelContext.save()
+                    newStorageName = ""
+                    print("API failed, created storage locally: \(error.localizedDescription)")
+                } catch {
+                    errorMessage = "Failed to create storage: \(error.localizedDescription)"
+                }
             }
+            isLoading = false
         }
     }
 

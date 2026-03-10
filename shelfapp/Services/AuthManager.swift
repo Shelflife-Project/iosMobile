@@ -31,6 +31,10 @@ class AuthManager {
 
         do {
             try await AuthService.shared.login(email: email, password: password)
+            // Explicitly ensure token is set in APIService
+            if let token = AuthService.shared.getStoredToken() {
+                APIService.shared.setToken(token)
+            }
             currentUser = AuthService.shared.getStoredUser()
             isAuthenticated = true
             isLoading = false
@@ -63,6 +67,8 @@ class AuthManager {
 
     func logout() {
         AuthService.shared.logout()
+        // Explicitly clear token from APIService
+        APIService.shared.setToken(nil)
         isAuthenticated = false
         currentUser = nil
         errorMessage = nil

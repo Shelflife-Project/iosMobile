@@ -87,29 +87,27 @@ struct ProductsView: View {
     private func createProduct(name: String, category: String, expirationDays: Int) {
         Task {
             do {
-                let product = Product(
+                // Try API first — returns a product with serverId
+                _ = try await SyncService.shared.addProductAndSync(
                     name: name,
                     category: category,
-                    expirationDaysDelta: expirationDays
+                    expirationDaysDelta: expirationDays,
+                    in: modelContext
                 )
-                modelContext.insert(product)
-                try modelContext.save()
-
-                // Attempt API sync in background
-                Task {
-                    do {
-                        _ = try await SyncService.shared.addProductAndSync(
-                            name: name,
-                            category: category,
-                            expirationDaysDelta: expirationDays,
-                            in: modelContext
-                        )
-                    } catch {
-                        print("API sync failed (local product created): \(error.localizedDescription)")
-                    }
-                }
             } catch {
-                errorMessage = "Failed to create product: \(error.localizedDescription)"
+                // API failed — create locally without serverId
+                do {
+                    let product = Product(
+                        name: name,
+                        category: category,
+                        expirationDaysDelta: expirationDays
+                    )
+                    modelContext.insert(product)
+                    try modelContext.save()
+                    print("API failed, created product locally: \(error.localizedDescription)")
+                } catch {
+                    errorMessage = "Failed to create product: \(error.localizedDescription)"
+                }
             }
         }
     }

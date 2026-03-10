@@ -426,25 +426,23 @@ struct AddItemSheet: View {
     private func addItem(product: Product) {
         Task {
             do {
-                let item = StorageItem(product: product, expiresAt: expirationDate)
-                storage.items.append(item)
-                try modelContext.save()
-
-                // Attempt API sync in background
-                Task {
-                    do {
-                        _ = try await SyncService.shared.addStorageItemAndSync(
-                            to: storage,
-                            product: product,
-                            expiresAt: expirationDate,
-                            in: modelContext
-                        )
-                    } catch {
-                        print("API sync failed (local item created): \(error.localizedDescription)")
-                    }
-                }
+                // Try API first — returns an item with serverId
+                _ = try await SyncService.shared.addStorageItemAndSync(
+                    to: storage,
+                    product: product,
+                    expiresAt: expirationDate,
+                    in: modelContext
+                )
             } catch {
-                print("Failed to add item: \(error.localizedDescription)")
+                // API failed — create locally without serverId
+                do {
+                    let item = StorageItem(product: product, expiresAt: expirationDate)
+                    storage.items.append(item)
+                    try modelContext.save()
+                    print("API failed, created item locally: \(error.localizedDescription)")
+                } catch {
+                    print("Failed to add item locally: \(error.localizedDescription)")
+                }
             }
         }
     }

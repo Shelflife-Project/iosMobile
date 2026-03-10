@@ -8,9 +8,11 @@ struct RootView: View {
     @State private var isSyncing = false
 
     init() { 
+        // Load stored token if available
+        let storedToken = AuthService.shared.getStoredToken()
         APIService.shared.configure(
             baseURL: "http://localhost:8080",
-            token: nil
+            token: storedToken
         )
     }
 
@@ -62,6 +64,21 @@ struct RootView: View {
 
     private func syncData() async {
         isSyncing = true
+
+        // Verify the stored token is still valid before syncing
+        if AuthService.shared.getStoredToken() != nil {
+            do {
+                let user = try await AuthService.shared.fetchCurrentUser()
+                authManager.currentUser = user
+            } catch {
+                // Token is expired or invalid — force re-login
+                print("Token validation failed: \(error.localizedDescription)")
+                authManager.logout()
+                isSyncing = false
+                return
+            }
+        }
+
         do {
             // Attempt to sync storages from API
             try await SyncService.shared.syncStorages(in: modelContext)

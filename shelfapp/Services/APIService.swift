@@ -86,7 +86,7 @@ class APIService {
         return try decoder.decode([StorageDTO].self, from: data).map { $0.toDomain() }
     }
 
-    func fetchStorage(id: String) async throws -> Storage {
+    func fetchStorage(id: Int) async throws -> Storage {
         guard let url = normalizeURL("api/storages/\(id)") else { throw APIError.invalidURL }
 
         var request = URLRequest(url: url)
@@ -120,7 +120,7 @@ class APIService {
         return dto.toDomain()
     }
 
-    func updateStorageName(id: String, name: String) async throws -> Storage {
+    func updateStorageName(id: Int, name: String) async throws -> Storage {
         guard let url = normalizeURL("api/storages/\(id)") else { throw APIError.invalidURL }
 
         let payload: [String: Any] = ["name": name]
@@ -139,7 +139,7 @@ class APIService {
         return dto.toDomain()
     }
 
-    func deleteStorage(id: String) async throws {
+    func deleteStorage(id: Int) async throws {
         guard let url = normalizeURL("api/storages/\(id)") else { throw APIError.invalidURL }
 
         var request = URLRequest(url: url)
@@ -191,7 +191,7 @@ class APIService {
 
     // MARK: - Storage Item API
 
-    func fetchStorageItems(storageId: String) async throws -> [StorageItem] {
+    func fetchStorageItems(storageId: Int) async throws -> [StorageItem] {
         guard let url = normalizeURL("api/storages/\(storageId)/items") else { throw APIError.invalidURL }
 
         var request = URLRequest(url: url)
@@ -205,12 +205,14 @@ class APIService {
         return try decoder.decode([StorageItemDTO].self, from: data).map { $0.toDomain() }
     }
 
-    func addStorageItem(storageId: String, productId: String, expiresAt: Date?) async throws -> StorageItem {
+    func addStorageItem(storageId: Int, productId: Int, expiresAt: Date?) async throws -> StorageItem {
         guard let url = normalizeURL("api/storages/\(storageId)/items") else { throw APIError.invalidURL }
 
         var payload: [String: Any] = ["productId": productId]
         if let expiresAt = expiresAt {
-            payload["expiresAt"] = ISO8601DateFormatter().string(from: expiresAt)
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            payload["expiresAt"] = formatter.string(from: expiresAt)
         }
         let jsonData = try JSONSerialization.data(withJSONObject: payload)
 
@@ -227,7 +229,7 @@ class APIService {
         return dto.toDomain()
     }
 
-    func deleteStorageItem(storageId: String, itemId: String) async throws {
+    func deleteStorageItem(storageId: Int, itemId: Int) async throws {
         guard let url = normalizeURL("api/storages/\(storageId)/items/\(itemId)") else { throw APIError.invalidURL }
 
         var request = URLRequest(url: url)
@@ -240,8 +242,8 @@ class APIService {
 
     // MARK: - Shopping List API
 
-    func fetchShoppingItems(storageId: String) async throws -> [ShoppingListItem] {
-        guard let url = normalizeURL("api/storages/\(storageId)/shopping-items") else { throw APIError.invalidURL }
+    func fetchShoppingItems(storageId: Int) async throws -> [ShoppingListItem] {
+        guard let url = normalizeURL("api/storages/\(storageId)/shoppinglist") else { throw APIError.invalidURL }
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
@@ -254,8 +256,8 @@ class APIService {
         return try decoder.decode([ShoppingListItemDTO].self, from: data).map { $0.toDomain() }
     }
 
-    func addShoppingItem(storageId: String, productId: String, amountToBuy: Int) async throws -> ShoppingListItem {
-        guard let url = normalizeURL("api/storages/\(storageId)/shopping-items") else { throw APIError.invalidURL }
+    func addShoppingItem(storageId: Int, productId: Int, amountToBuy: Int) async throws -> ShoppingListItem {
+        guard let url = normalizeURL("api/storages/\(storageId)/shoppinglist") else { throw APIError.invalidURL }
 
         let payload: [String: Any] = [
             "productId": productId,
@@ -276,8 +278,8 @@ class APIService {
         return dto.toDomain()
     }
 
-    func deleteShoppingItem(storageId: String, itemId: String) async throws {
-        guard let url = normalizeURL("api/storages/\(storageId)/shopping-items/\(itemId)") else { throw APIError.invalidURL }
+    func deleteShoppingItem(storageId: Int, itemId: Int) async throws {
+        guard let url = normalizeURL("api/storages/\(storageId)/shoppinglist/\(itemId)") else { throw APIError.invalidURL }
 
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
@@ -462,7 +464,7 @@ struct ProductDTO: Codable {
     let barcode: String?
 
     func toDomain() -> Product {
-        Product(name: name, category: category, expirationDaysDelta: expirationDaysDelta, barcode: barcode)
+        Product(name: name, category: category, expirationDaysDelta: expirationDaysDelta, barcode: barcode, serverId: id)
     }
 }
 
@@ -473,11 +475,31 @@ struct StorageItemDTO: Codable {
     let createdAt: String
 
     func toDomain() -> StorageItem {
-        let dateFormatter = ISO8601DateFormatter()
-        let expiresAtDate = expiresAt.flatMap { dateFormatter.date(from: $0) }
-        let createdAtDate = dateFormatter.date(from: createdAt) ?? Date()
+        var expiresAtDate: Date? = nil
+        if let expiresAt = expiresAt {
+            // Backend returns LocalDate as "yyyy-MM-dd"
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd"
+            dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+            expiresAtDate = dateFormatter.date(from: expiresAt)
+            // Fallback to ISO8601 if needed
+            if expiresAtDate == nil {
+                expiresAtDate = ISO8601DateFormatter().date(from: expiresAt)
+            }
+        }
 
-        return StorageItem(product: product?.toDomain(), expiresAt: expiresAtDate, createdAt: createdAtDate)
+        var createdAtDate: Date
+        let isoFormatter = ISO8601DateFormatter()
+        // Try with fractional seconds first
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let parsed = isoFormatter.date(from: createdAt) {
+            createdAtDate = parsed
+        } else {
+            isoFormatter.formatOptions = [.withInternetDateTime]
+            createdAtDate = isoFormatter.date(from: createdAt) ?? Date()
+        }
+
+        return StorageItem(product: product?.toDomain(), expiresAt: expiresAtDate, createdAt: createdAtDate, serverId: id)
     }
 }
 
@@ -488,6 +510,6 @@ struct ShoppingListItemDTO: Codable {
     let amountToBuy: Int
 
     func toDomain() -> ShoppingListItem {
-        ShoppingListItem(storage: storage?.toDomain(), product: product?.toDomain(), amountToBuy: amountToBuy)
+        ShoppingListItem(storage: storage?.toDomain(), product: product?.toDomain(), amountToBuy: amountToBuy, serverId: id)
     }
 }
