@@ -174,10 +174,10 @@ final class ImageCache: @unchecked Sendable {
 
 extension APIService {
     func productIconURL(productId: Int) -> URL? {
-        normalizeURL("api/products/\(productId)/icon")
+        normalizeURL("api/products/\(productId)/icon/small")
     }
 
     func userPfpURL(userId: Int) -> URL? {
-        normalizeURL("api/users/\(userId)/pfp")
+        normalizeURL("api/users/\(userId)/pfp/small")
     }
 }
