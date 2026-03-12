@@ -1,13 +1,10 @@
 import SwiftUI
 import SwiftData
 
-// MARK: - HomeView
-
 struct HomeView: View {
     @Environment(\.modelContext) var modelContext
     @Query var storages: [Storage]
 
-    // Animation states – staggered: box → list → cart
     @State private var animateBox = true
     @State private var animateList = true
     @State private var animateCart = true
@@ -24,7 +21,6 @@ struct HomeView: View {
                 .padding(.horizontal)
 
                 VStack(spacing: 16) {
-                    // 1) Storages – shippingbox.fill wiggle
                     NavigationLink(destination: StoragesView()) {
                         StatCard(
                             title: "Total Storages",
@@ -37,7 +33,6 @@ struct HomeView: View {
                     }
                     .buttonStyle(.plain)
 
-                    // 2) Products – list.bullet.rectangle drawOn
                     let totalItems = storages.reduce(0) { $0 + $1.items.count }
                     NavigationLink(destination: ProductsView()) {
                         StatCard(
@@ -51,7 +46,6 @@ struct HomeView: View {
                     }
                     .buttonStyle(.plain)
 
-                    // 3) Shopping List – cart.fill drawOn
                     let totalShoppingItems = storages.reduce(0) { $0 + $1.shoppingItems.count }
                     NavigationLink(destination: ShoppingListView()) {
                         StatCard(
@@ -77,94 +71,15 @@ struct HomeView: View {
         }
     }
 
-    /// Fires animations in sequence: box → list → cart
     private func triggerStaggeredAnimations() {
-        
-        // Step 1: box wiggle
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-            withAnimation(.easeInOut(duration: 0.6)) {
-                animateBox = false
-            }
+            withAnimation(.easeInOut(duration: 0.6)) { animateBox = false }
         }
-
-        // Step 2: list draws
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-            withAnimation(.easeInOut(duration: 0.6)) {
-                animateList = false
-            }
+            withAnimation(.easeInOut(duration: 0.6)) { animateList = false }
         }
-
-        // Step 3: cart draws
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-            withAnimation(.easeInOut(duration: 0.6)) {
-                animateCart = false
-            }
-        }
-    }
-}
-
-// MARK: - StatCard
-
-enum StatCardAnimation {
-    case wiggle
-    case drawOn
-}
-
-struct StatCard: View {
-    let title: String
-    let value: String
-    let icon: String
-    let color: Color
-    var animationStyle: StatCardAnimation = .drawOn
-    var isAnimating: Bool = false
-
-    var body: some View {
-        HStack(spacing: 16) {
-            Image(systemName: icon)
-                .font(.system(size: 24))
-                .foregroundStyle(color)
-                .frame(width: 48, height: 48)
-                .background(color.opacity(0.1))
-                .cornerRadius(8)
-                .modifier(StatCardAnimationModifier(
-                    style: animationStyle,
-                    isAnimating: isAnimating
-                ))
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text(value)
-                    .font(.title2)
-                    .fontWeight(.bold)
-            }
-
-            Spacer()
-
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-        }
-        .padding()
-        .background(Color(.secondarySystemBackground))
-        .cornerRadius(12)
-        .shadow(radius: 4, x:3, y:3)
-    }
-}
-
-struct StatCardAnimationModifier: ViewModifier {
-    let style: StatCardAnimation
-    let isAnimating: Bool
-
-    func body(content: Content) -> some View {
-        switch style {
-        case .wiggle:
-            content
-                .symbolEffect(.wiggle, isActive: isAnimating)
-        case .drawOn:
-            content
-                .symbolEffect(.drawOn, isActive: isAnimating)
+            withAnimation(.easeInOut(duration: 0.6)) { animateCart = false }
         }
     }
 }

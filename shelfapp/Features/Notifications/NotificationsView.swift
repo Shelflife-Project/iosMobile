@@ -31,43 +31,12 @@ struct NotificationsView: View {
                         if !invites.isEmpty {
                             Section {
                                 ForEach(invites) { invite in
-                                    HStack(spacing: 12) {
-                                        Image(systemName: "envelope.badge.fill")
-                                            .foregroundStyle(.orange)
-                                            .font(.system(size: 20))
-                                            .symbolEffect(.drawOn, isActive: animateEnvelope)
-
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text(invite.storageName)
-                                                .font(.headline)
-                                            Text("Invited by \(invite.invitedBy)")
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                        }
-
-                                        Spacer()
-
-                                        HStack(spacing: 8) {
-                                            Button {
-                                                acceptInvite(invite)
-                                            } label: {
-                                                Image(systemName: "checkmark.circle.fill")
-                                                    .font(.title2)
-                                                    .foregroundStyle(.green)
-                                            }
-                                            .buttonStyle(.plain)
-
-                                            Button {
-                                                declineInvite(invite)
-                                            } label: {
-                                                Image(systemName: "xmark.circle.fill")
-                                                    .font(.title2)
-                                                    .foregroundStyle(.red)
-                                            }
-                                            .buttonStyle(.plain)
-                                        }
-                                    }
-                                    .padding(.vertical, 4)
+                                    InviteNotificationRow(
+                                        invite: invite,
+                                        animateEnvelope: animateEnvelope,
+                                        onAccept: { acceptInvite(invite) },
+                                        onDecline: { declineInvite(invite) }
+                                    )
                                 }
                             } header: {
                                 HStack(spacing: 6) {
@@ -133,7 +102,6 @@ struct NotificationsView: View {
         Task {
             do {
                 try await APIService.shared.acceptInvite(inviteId: invite.id)
-                // Sync storages so the newly joined storage appears
                 try? await SyncService.shared.syncStorages(in: modelContext)
                 await MainActor.run {
                     withAnimation { invites.removeAll { $0.id == invite.id } }

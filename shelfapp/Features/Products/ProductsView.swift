@@ -87,7 +87,6 @@ struct ProductsView: View {
     private func createProduct(name: String, category: String, expirationDays: Int) {
         Task {
             do {
-                // Try API first — returns a product with serverId
                 _ = try await SyncService.shared.addProductAndSync(
                     name: name,
                     category: category,
@@ -95,7 +94,6 @@ struct ProductsView: View {
                     in: modelContext
                 )
             } catch {
-                // API failed — create locally without serverId
                 do {
                     let product = Product(
                         name: name,
@@ -107,119 +105,6 @@ struct ProductsView: View {
                     print("API failed, created product locally: \(error.localizedDescription)")
                 } catch {
                     errorMessage = "Failed to create product: \(error.localizedDescription)"
-                }
-            }
-        }
-    }
-}
-
-struct ProductListRow: View {
-    var product: Product
-    
-    @State private var isDrawing = true
-
-    var body: some View {
-        HStack(spacing: 12) {
-            RemoteImage(
-                url: product.serverId.flatMap { APIService.shared.productIconURL(productId: $0) }, 
-                size: 40
-            )
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text(product.name)
-                    .font(.headline)
-                    .fontWeight(.semibold)
-
-                HStack() {
-                if !product.category.isEmpty {
-                    Label {
-                        Text(product.category)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    } icon: {
-                        Image(systemName: "tag.circle")
-                            .foregroundStyle(.yellow)
-                            .symbolEffect(.drawOn, isActive: isDrawing)
-                    }
-                }
-                else {
-                    Label {
-                        Text("Without category")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    } icon: {
-                        Image(systemName: "tag.slash.fill")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 18, height: 18)
-                            .foregroundStyle(.red)
-                            .symbolEffect(.drawOn, isActive: isDrawing)
-                            
-                    }
-                }
-                Spacer()
-                Label {
-                    Text("\(product.expirationDaysDelta)d")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                } icon: {
-                    Image(systemName: "calendar")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 20, height: 20)
-                        .foregroundStyle(.purple)
-                }
-                }.onAppear{
-                    isDrawing = false
-                }
-            }
-        }
-        .padding(.vertical, 4)
-    }
-}
-
-struct CreateProductSheet: View {
-    @Binding var isPresented: Bool
-    var onSave: (String, String, Int) -> Void
-    @State private var name = ""
-    @State private var category = ""
-    @State private var description = ""
-    @State private var expirationDays = 7
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section("Product Details") {
-                    TextField("Product Name", text: $name)
-                        .textInputAutocapitalization(.words)
-                    TextField("Product Description", text: $description)
-                    TextField("Category", text: $category)
-                        .textInputAutocapitalization(.words)
-                    
-                }
-
-                Section("Expiration") {
-                    Stepper(
-                        "Days: \(expirationDays)",
-                        value: $expirationDays,
-                        in: 0...365
-                    )
-                }
-            }
-            .navigationTitle("Create Product")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        isPresented = false
-                    }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Save") {
-                        onSave(name, category, expirationDays)
-                        isPresented = false
-                    }
-                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
         }

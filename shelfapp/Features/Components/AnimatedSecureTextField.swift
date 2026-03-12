@@ -23,6 +23,7 @@ struct AnimatedSecureTextField: View {
                         .textContentType(.password)
                         .background(Color(.systemGray6))
                         .cornerRadius(8)
+                        .shadow(radius: 4, x: 3, y: 3)
                     
                 }else{
                     TextField(titleKey, text: $text)
@@ -30,6 +31,7 @@ struct AnimatedSecureTextField: View {
                         .padding()
                         .background(Color(.systemGray6))
                         .cornerRadius(8)
+                        .shadow(radius: 4, x: 3, y: 3)
                 }
         
                 Button(action: {

@@ -1,9 +1,10 @@
 import SwiftUI
-import WebKit
 
 /// A reusable view that loads an image from a URL asynchronously
 /// with an in-memory cache to avoid repeated network requests.
-/// Supports both raster images (png/jpg) and SVG.
+/// Raster images (png/jpg) are displayed directly.
+/// SVG responses (server placeholders) fall back to the SF Symbol placeholder
+/// to avoid WKWebView overhead and simulator console noise.
 struct RemoteImage: View {
     let url: URL?
     let placeholder: String
@@ -32,13 +33,6 @@ struct RemoteImage: View {
     }
 }
 
-// MARK: - Image Load Result
-
-private enum LoadedImage {
-    case raster(UIImage)
-    case svg(Data)
-}
-
 // MARK: - Cached Async Image
 
 private struct CachedAsyncImage: View {
@@ -46,23 +40,18 @@ private struct CachedAsyncImage: View {
     let placeholder: String
     let size: CGFloat
 
-    @State private var loadedImage: LoadedImage?
+    @State private var loadedImage: UIImage?
     @State private var isLoading = false
 
     var body: some View {
         Group {
-            switch loadedImage {
-            case .raster(let uiImage):
+            if let uiImage = loadedImage {
                 Image(uiImage: uiImage)
                     .resizable()
                     .scaledToFill()
                     .frame(width: size, height: size)
                     .clipShape(RoundedRectangle(cornerRadius: size / 4))
-            case .svg(let data):
-                SVGView(data: data)
-                    .frame(width: size, height: size)
-                    .clipShape(RoundedRectangle(cornerRadius: size / 4))
-            case nil:
+            } else {
                 Image(systemName: placeholder)
                     .resizable()
                     .scaledToFit()
@@ -77,13 +66,8 @@ private struct CachedAsyncImage: View {
     }
 
     private func loadImage() async {
-        // Check cache first
         if let cached = ImageCache.shared.get(for: url) {
-            self.loadedImage = .raster(cached)
-            return
-        }
-        if let cachedSVG = ImageCache.shared.getSVG(for: url) {
-            self.loadedImage = .svg(cachedSVG)
+            self.loadedImage = cached
             return
         }
 
@@ -95,48 +79,16 @@ private struct CachedAsyncImage: View {
             let contentType = (response as? HTTPURLResponse)?
                 .value(forHTTPHeaderField: "Content-Type") ?? ""
 
-            if contentType.contains("svg") {
-                ImageCache.shared.setSVG(data, for: url)
-                self.loadedImage = .svg(data)
-            } else if let uiImage = UIImage(data: data) {
-                ImageCache.shared.set(uiImage, for: url)
-                self.loadedImage = .raster(uiImage)
+            // SVG responses are server placeholders — fall back to SF Symbol
+            if contentType.contains("svg") { return }
+
+            if let image = UIImage(data: data) {
+                ImageCache.shared.set(image, for: url)
+                self.loadedImage = image
             }
         } catch {
             // Silently fail — placeholder remains visible
         }
-    }
-}
-
-// MARK: - SVG View (WKWebView wrapper)
-
-private struct SVGView: UIViewRepresentable {
-    let data: Data
-
-    func makeUIView(context: Context) -> WKWebView {
-        let webView = WKWebView()
-        webView.isOpaque = false
-        webView.backgroundColor = .clear
-        webView.scrollView.backgroundColor = .clear
-        webView.scrollView.isScrollEnabled = false
-        webView.isUserInteractionEnabled = false
-        return webView
-    }
-
-    func updateUIView(_ webView: WKWebView, context: Context) {
-        let html = """
-        <html>
-        <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-            body { margin: 0; display: flex; align-items: center; justify-content: center; background: transparent; }
-            svg { width: 100%; height: 100%; }
-        </style>
-        </head>
-        <body>\(String(data: data, encoding: .utf8) ?? "")</body>
-        </html>
-        """
-        webView.loadHTMLString(html, baseURL: nil)
     }
 }
 
@@ -145,28 +97,18 @@ private struct SVGView: UIViewRepresentable {
 final class ImageCache: @unchecked Sendable {
     static let shared = ImageCache()
 
-    private let rasterCache = NSCache<NSURL, UIImage>()
-    private let svgCache = NSCache<NSURL, NSData>()
+    private let cache = NSCache<NSURL, UIImage>()
 
     private init() {
-        rasterCache.countLimit = 200
-        svgCache.countLimit = 200
+        cache.countLimit = 200
     }
 
     func get(for url: URL) -> UIImage? {
-        rasterCache.object(forKey: url as NSURL)
+        cache.object(forKey: url as NSURL)
     }
 
     func set(_ image: UIImage, for url: URL) {
-        rasterCache.setObject(image, forKey: url as NSURL)
-    }
-
-    func getSVG(for url: URL) -> Data? {
-        svgCache.object(forKey: url as NSURL) as Data?
-    }
-
-    func setSVG(_ data: Data, for url: URL) {
-        svgCache.setObject(data as NSData, forKey: url as NSURL)
+        cache.setObject(image, forKey: url as NSURL)
     }
 }
 

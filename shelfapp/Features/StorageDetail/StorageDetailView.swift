@@ -76,41 +76,12 @@ struct StorageDetailView: View {
                         .font(.caption)
                 } else {
                     ForEach(acceptedMembers) { member in
-                        HStack(spacing: 12) {
-                            ZStack(alignment: .bottomTrailing) {
-                                RemoteImage(
-                                    url: APIService.shared.userPfpURL(userId: member.userId),
-                                    size: 36
-                                )
-
-                                if isOwnerMember(member) {
-                                    Image(systemName: "crown.fill")
-                                        .font(.system(size: 10))
-                                        .foregroundStyle(.yellow)
-                                        .offset(x: 4, y: 4)
-                                }
-                            }
-
-                            Text(member.username)
-                                .font(.body)
-
-                            Spacer()
-
-                            if isOwnerMember(member) {
-                                Text("Owner")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        .swipeActions(edge: .trailing) {
-                            if isOwner && !isOwnerMember(member) {
-                                Button(role: .destructive) {
-                                    removeMember(member)
-                                } label: {
-                                    Label("Remove", systemImage: "person.badge.minus")
-                                }
-                            }
-                        }
+                        MemberRow(
+                            member: member,
+                            isOwnerMember: isOwnerMember(member),
+                            showRemoveAction: isOwner && !isOwnerMember(member),
+                            onRemove: { removeMember(member) }
+                        )
                     }
                 }
             } header: {
@@ -126,37 +97,10 @@ struct StorageDetailView: View {
             if isOwner && !invitedMembers.isEmpty {
                 Section {
                     ForEach(invitedMembers) { invite in
-                        HStack(spacing: 12) {
-                            ZStack(alignment: .bottomTrailing) {
-                                RemoteImage(
-                                    url: APIService.shared.userPfpURL(userId: invite.userId),
-                                    placeholder: "person.circle.fill",
-                                    size: 36
-                                )
-
-                                Image(systemName: "envelope.fill")
-                                    .font(.system(size: 10))
-                                    .foregroundStyle(.orange)
-                                    .offset(x: 4, y: 4)
-                            }
-
-                            Text(invite.username)
-                                .font(.body)
-
-                            Spacer()
-
-                            Text("Pending")
-                                .font(.caption)
-                                .foregroundStyle(.orange)
-                        }
-                        .swipeActions(edge: .trailing) {
-                            Button(role: .destructive) {
-                                cancelInvite(invite)
-                            } label: {
-                                Label("Cancel", systemImage: "xmark.circle")
-                            }
-                            .tint(.orange)
-                        }
+                        PendingInviteRow(
+                            invite: invite,
+                            onCancel: { cancelInvite(invite) }
+                        )
                     }
                 } header: {
                     HStack(spacing: 6) {
@@ -261,7 +205,6 @@ struct StorageDetailView: View {
                 let fetched = try await APIService.shared.fetchMembers(storageId: storageServerId)
                 await MainActor.run {
                     members = fetched
-                    // Ensure the owner is listed at the top even if not in members list
                     if let ownerId = storage.owner?.serverId,
                        !members.contains(where: { $0.userId == ownerId }),
                        let ownerName = storage.owner?.username {
@@ -274,7 +217,6 @@ struct StorageDetailView: View {
                 }
             } catch {
                 await MainActor.run {
-                    // If API fails, show at least the owner
                     if let ownerId = storage.owner?.serverId,
                        let ownerName = storage.owner?.username {
                         members = [StorageMemberInfo(id: -1, userId: ownerId, username: ownerName, accepted: true)]
@@ -318,7 +260,6 @@ struct StorageDetailView: View {
         guard let storageServerId = storage.serverId else { return }
         Task {
             do {
-                // Cancelling an invite = removing the member entry
                 try await APIService.shared.removeMember(storageId: storageServerId, userId: invite.userId)
                 await MainActor.run {
                     members.removeAll { $0.id == invite.id }
@@ -352,167 +293,6 @@ struct StorageDetailView: View {
                     try await SyncService.shared.deleteShoppingItemAndSync(item, from: storage, in: modelContext)
                 } catch {
                     errorMessage = "Failed to delete shopping item: \(error.localizedDescription)"
-                }
-            }
-        }
-    }
-}
-
-struct ItemRow: View {
-    var item: StorageItem
-    
-    var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(item.product?.name ?? "Unknown")
-                    .fontWeight(.semibold)
-                if let category = item.product?.category, !category.isEmpty {
-                    Text(category)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            Spacer()
-            VStack(alignment: .trailing, spacing: 4) {
-                if let expires = item.expiresAt {
-                    Text(expires, format: .dateTime.month().day())
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
-    }
-}
-
-struct ShoppingItemRow: View {
-    var item: ShoppingListItem
-    
-    var body: some View {
-        HStack {
-            Text(item.product?.name ?? "Unknown")
-            Spacer()
-            Text("×\(item.amountToBuy)")
-                .fontWeight(.semibold)
-        }
-    }
-}
-
-struct AddItemSheet: View {
-    var storage: Storage
-    @Binding var isPresented: Bool
-    @Environment(\.modelContext) var modelContext
-    @State private var selectedProduct: Product?
-    @State private var expirationDate: Date = Date().addingTimeInterval(7 * 24 * 3600)
-    @Query(sort: \Product.name) var products: [Product]
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section("Select Product") {
-                    if products.isEmpty {
-                        Text("No products available. Create one first.")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Picker("Product", selection: $selectedProduct) {
-                            Text("-- Select a product --").tag(Optional<Product>(nil))
-                            ForEach(products) { product in
-                                Text(product.name).tag(Optional<Product>(product))
-                            }
-                        }
-                    }
-                }
-
-                if selectedProduct != nil {
-                    Section("Expiration Date") {
-                        DatePicker(
-                            "Expires",
-                            selection: $expirationDate,
-                            displayedComponents: .date
-                        )
-                    }
-                }
-            }
-            .navigationTitle("Add Item")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        isPresented = false
-                    }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Add") {
-                        if let product = selectedProduct {
-                            addItem(product: product)
-                            isPresented = false
-                        }
-                    }
-                    .disabled(selectedProduct == nil)
-                }
-            }
-        }
-    }
-
-    private func addItem(product: Product) {
-        Task {
-            do {
-                // Try API first — returns an item with serverId
-                _ = try await SyncService.shared.addStorageItemAndSync(
-                    to: storage,
-                    product: product,
-                    expiresAt: expirationDate,
-                    in: modelContext
-                )
-            } catch {
-                // API failed — create locally without serverId
-                do {
-                    let item = StorageItem(product: product, expiresAt: expirationDate)
-                    storage.items.append(item)
-                    try modelContext.save()
-                    print("API failed, created item locally: \(error.localizedDescription)")
-                } catch {
-                    print("Failed to add item locally: \(error.localizedDescription)")
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Invite Member Sheet
-
-struct InviteMemberSheet: View {
-    @Binding var isPresented: Bool
-    var onInvite: (String) -> Void
-    @State private var email = ""
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section("Invite by Email") {
-                    TextField("Email address", text: $email)
-                        .textInputAutocapitalization(.never)
-                        .keyboardType(.emailAddress)
-                        .autocorrectionDisabled()
-                }
-
-                Section {
-                    Text("The user will receive an invitation they can accept or decline.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .navigationTitle("Invite Member")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { isPresented = false }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Send Invite") {
-                        onInvite(email)
-                        isPresented = false
-                    }
-                    .disabled(email.trimmingCharacters(in: .whitespaces).isEmpty || !email.contains("@"))
                 }
             }
         }
