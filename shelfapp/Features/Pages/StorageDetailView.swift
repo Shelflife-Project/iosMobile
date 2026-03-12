@@ -77,10 +77,19 @@ struct StorageDetailView: View {
                 } else {
                     ForEach(acceptedMembers) { member in
                         HStack(spacing: 12) {
-                            Image(systemName: isOwnerMember(member) ? "crown.fill" : "person.fill")
-                                .foregroundStyle(isOwnerMember(member) ? .yellow : .cyan)
-                                .font(.system(size: 14))
-                                .frame(width: 24)
+                            ZStack(alignment: .bottomTrailing) {
+                                RemoteImage(
+                                    url: APIService.shared.userPfpURL(userId: member.userId),
+                                    size: 36
+                                )
+
+                                if isOwnerMember(member) {
+                                    Image(systemName: "crown.fill")
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(.yellow)
+                                        .offset(x: 4, y: 4)
+                                }
+                            }
 
                             Text(member.username)
                                 .font(.body)
@@ -118,10 +127,18 @@ struct StorageDetailView: View {
                 Section {
                     ForEach(invitedMembers) { invite in
                         HStack(spacing: 12) {
-                            Image(systemName: "envelope.fill")
-                                .foregroundStyle(.orange)
-                                .font(.system(size: 14))
-                                .frame(width: 24)
+                            ZStack(alignment: .bottomTrailing) {
+                                RemoteImage(
+                                    url: APIService.shared.userPfpURL(userId: invite.userId),
+                                    placeholder: "person.circle.fill",
+                                    size: 36
+                                )
+
+                                Image(systemName: "envelope.fill")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(.orange)
+                                    .offset(x: 4, y: 4)
+                            }
 
                             Text(invite.username)
                                 .font(.body)

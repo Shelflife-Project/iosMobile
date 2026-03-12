@@ -16,9 +16,6 @@ struct HomeView: View {
         NavigationStack {
             VStack(spacing: 24) {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Welcome to Shelf Life")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
                     Text("Your personal inventory management system")
                         .font(.body)
                         .foregroundStyle(.secondary)
@@ -72,7 +69,7 @@ struct HomeView: View {
 
                 Spacer()
             }
-            .navigationTitle("Home")
+            .navigationTitle("Welcome to ShelfLife")
             .appGradientBackground()
             .onAppear {
                 triggerStaggeredAnimations()
@@ -150,8 +147,9 @@ struct StatCard: View {
                 .foregroundStyle(.tertiary)
         }
         .padding()
-        .background(Color(.systemGray6).opacity(0.85))
+        .background(Color(.secondarySystemBackground))
         .cornerRadius(12)
+        .shadow(radius: 4, x:3, y:3)
     }
 }
 

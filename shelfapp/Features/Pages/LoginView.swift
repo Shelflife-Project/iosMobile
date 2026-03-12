@@ -72,7 +72,7 @@ struct LoginFormView: View {
     var body: some View {
         VStack(spacing: 16) {
             VStack(spacing: 12) {
-                TextField("Email", text: $email)
+                TextField("Email...", text: $email)
                     .textInputAutocapitalization(.never)
                     .keyboardType(.emailAddress)
                     .textContentType(.emailAddress)
@@ -80,11 +80,7 @@ struct LoginFormView: View {
                     .background(Color(.systemGray6))
                     .cornerRadius(8)
 
-                SecureField("Password", text: $password)
-                    .textContentType(.password)
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .cornerRadius(8)
+                AnimatedSecureTextField(text: $password, titleKey: "Password...")
             }
 
             if let error = errorMessage {

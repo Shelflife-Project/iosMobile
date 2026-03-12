@@ -37,7 +37,7 @@ class APIService {
     static let shared = APIService()
 
     // Configuration
-    var baseURL: String = "http://localhost:8080"
+    var baseURL: String = AppConfig.baseURL
     private var token: String?
 
     // MARK: - Configuration Methods
@@ -61,7 +61,7 @@ class APIService {
         return headers
     }
 
-    private func normalizeURL(_ path: String) -> URL? {
+    func normalizeURL(_ path: String) -> URL? {
         var urlString = baseURL
         if !urlString.hasSuffix("/") {
             urlString += "/"

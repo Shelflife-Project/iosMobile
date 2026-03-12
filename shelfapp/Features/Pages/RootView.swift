@@ -11,7 +11,7 @@ struct RootView: View {
         // Load stored token if available
         let storedToken = AuthService.shared.getStoredToken()
         APIService.shared.configure(
-            baseURL: "http://localhost:8080",
+            baseURL: AppConfig.baseURL,
             token: storedToken
         )
     }

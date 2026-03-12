@@ -97,6 +97,7 @@ struct StoragesView: View {
                     }
                 }
                 .scrollContentBackground(.hidden)
+                .shadow(radius: 4, x: 3, y: 3)
             }
         }
         .navigationTitle("Storages")

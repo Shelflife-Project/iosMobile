@@ -180,7 +180,7 @@ class AuthService {
     // MARK: - Computed Properties
 
     var baseURL: String {
-        "http://localhost:8080"
+        AppConfig.baseURL
     }
 }
 

@@ -4,12 +4,18 @@ struct AppGradientBackground: ViewModifier {
     @Environment(\.colorScheme) var colorScheme
 
     func body(content: Content) -> some View {
+        let topColor: Color = colorScheme == .dark
+        ? Color(.systemIndigo).opacity(0.35)
+        : Color(.systemCyan).opacity(0.4)
+
         content
             .background(
                 LinearGradient(
-                    colors: colorScheme == .dark
-                        ? [Color(red: 0.15, green: 0.05, blue: 0.25), Color(.systemBackground)]
-                        : [Color(red: 0.93, green: 0.88, blue: 0.97), Color(.systemBackground)],
+                    gradient: Gradient(stops: [
+                        .init(color: topColor, location: 0.0),
+                        .init(color: topColor, location: 0.65),
+                        .init(color: Color(.systemBackground), location: 2.2)
+                    ]),
                     startPoint: .top,
                     endPoint: .bottom
                 )

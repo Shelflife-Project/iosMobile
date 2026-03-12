@@ -119,12 +119,18 @@ struct ProductListRow: View {
     @State private var isDrawing = true
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(product.name)
-                .font(.headline)
-                .fontWeight(.semibold)
+        HStack(spacing: 12) {
+            RemoteImage(
+                url: product.serverId.flatMap { APIService.shared.productIconURL(productId: $0) }, 
+                size: 40
+            )
 
-            HStack() {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(product.name)
+                    .font(.headline)
+                    .fontWeight(.semibold)
+
+                HStack() {
                 if !product.category.isEmpty {
                     Label {
                         Text(product.category)
@@ -163,9 +169,9 @@ struct ProductListRow: View {
                         .frame(width: 20, height: 20)
                         .foregroundStyle(.purple)
                 }
-            }.onAppear{
-                isDrawing = false
-                
+                }.onAppear{
+                    isDrawing = false
+                }
             }
         }
         .padding(.vertical, 4)
