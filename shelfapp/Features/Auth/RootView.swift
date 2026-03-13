@@ -6,6 +6,8 @@ struct RootView: View {
     @State private var authManager = AuthManager.shared
     @State private var selectedTab: TabItem = .home
     @State private var isSyncing = false
+    
+    @State private var storageContext = StorageContext()
 
     init() { 
         // Load stored token if available
@@ -54,6 +56,7 @@ struct RootView: View {
                     }
                     .tag(TabItem.profile)
             }
+            .environment(storageContext)
             .task {
                 await syncData()
             }

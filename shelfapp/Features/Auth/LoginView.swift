@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct LoginView: View {
+    @Environment(\.colorScheme) var colorScheme
     @State private var selectedTab: AuthTab = .login
     @State private var email = ""
     @State private var password = ""
@@ -12,12 +13,16 @@ struct LoginView: View {
         case signup
     }
 
+    private var color: Color {
+        colorScheme == .dark ? Color(.indigo) : Color(.cyan)
+    }
+    
     var body: some View {
             VStack(spacing: 24) {
                 VStack(spacing: 12) {
                     Image(systemName: "cube.box.fill")
                         .font(.system(size: 48))
-                        .foregroundStyle(.blue)
+                        .foregroundStyle(color)
 
                     Text("Shelf Life")
                         .font(.system(size: 32, weight: .bold))

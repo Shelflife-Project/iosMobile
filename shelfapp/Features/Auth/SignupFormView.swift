@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct SignupFormView: View {
+    @Environment(\.colorScheme) var colorScheme
     @Binding var username: String
     @Binding var email: String
     @Binding var password: String
@@ -9,6 +10,10 @@ struct SignupFormView: View {
     @State private var isLoading = false
     var authManager = AuthManager.shared
 
+    private var color: Color {
+        colorScheme == .dark ? Color(.indigo) : Color(.cyan)
+    }
+    
     var body: some View {
         VStack(spacing: 16) {
             VStack(spacing: 12) {
@@ -44,6 +49,7 @@ struct SignupFormView: View {
             }
 
             if let error = errorMessage {
+                Spacer()
                 HStack {
                     Image(systemName: "exclamationmark.circle.fill")
                         .foregroundStyle(.red)
@@ -55,7 +61,9 @@ struct SignupFormView: View {
                 .background(Color.red.opacity(0.1))
                 .cornerRadius(8)
                 .shadow(radius: 4, x: 3, y: 3)
+                Spacer()
             }
+            Spacer()
 
             Button(action: signup) {
                 if isLoading {
@@ -68,7 +76,7 @@ struct SignupFormView: View {
             }
             .frame(maxWidth: .infinity)
             .padding()
-            .background(Color.blue)
+            .background(color)
             .foregroundStyle(.white)
             .cornerRadius(8)
             .disabled(isLoading || username.isEmpty || email.isEmpty || password.isEmpty || passwordRepeat.isEmpty)

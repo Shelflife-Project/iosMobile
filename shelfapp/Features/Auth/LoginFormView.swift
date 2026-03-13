@@ -1,12 +1,17 @@
 import SwiftUI
 
 struct LoginFormView: View {
+    @Environment(\.colorScheme) var colorScheme
     @Binding var email: String
     @Binding var password: String
     @State private var errorMessage: String?
     @State private var isLoading = false
     var authManager = AuthManager.shared
 
+    private var color: Color {
+        colorScheme == .dark ? Color(.indigo) : Color(.cyan)
+    }
+    
     var body: some View {
         VStack(spacing: 16) {
             VStack(spacing: 12) {
@@ -50,7 +55,7 @@ struct LoginFormView: View {
             }
             .frame(maxWidth: .infinity)
             .padding()
-            .background(Color.blue)
+            .background(color)
             .foregroundStyle(.white)
             .cornerRadius(8)
             .disabled(isLoading || email.isEmpty || password.isEmpty)

@@ -5,8 +5,8 @@ struct AppGradientBackground: ViewModifier {
 
     func body(content: Content) -> some View {
         let topColor: Color = colorScheme == .dark
-        ? Color(.systemIndigo).opacity(0.35)
-        : Color(.systemCyan).opacity(0.4)
+        ? Color(.systemIndigo).opacity(0.30)
+        : Color(.systemCyan).opacity(0.3)
 
         content
             .background(
