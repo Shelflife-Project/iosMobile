@@ -3,30 +3,24 @@ import SwiftData
 
 struct ProductsView: View {
     @Environment(\.modelContext) var modelContext
-    @Query(sort: \Product.name) var products: [Product]
-    @State private var showCreateForm = false
-    @State private var selectedCategory: String?
-    @State private var searchText = ""
-    @State private var errorMessage: String?
+    @Environment(ProductsContext.self) private var productsContext
+    @State private var viewModel = ProductsViewModel()
 
     var filteredProducts: [Product] {
-        products.filter { product in
-            let matchesSearch = searchText.isEmpty || product.name.localizedCaseInsensitiveContains(searchText)
-            let matchesCategory = selectedCategory == nil || product.category == selectedCategory
-            return matchesSearch && matchesCategory
-        }
+        viewModel.filteredProducts(from: productsContext.products)
     }
 
     var categories: [String] {
-        Array(Set(products.map { $0.category }))
-            .filter { !$0.isEmpty }
-            .sorted()
+        viewModel.categories(from: productsContext.products)
     }
 
     var body: some View {
         NavigationStack {
             Group {
-                if products.isEmpty {
+                if productsContext.isLoading {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if productsContext.products.isEmpty {
                     VStack(spacing: 16) {
                         Image(systemName: "cube")
                             .font(.system(size: 48))
@@ -36,7 +30,7 @@ struct ProductsView: View {
                         Text("Create your first product to get started")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        Button(action: { showCreateForm = true }) {
+                        Button(action: { viewModel.showCreateForm = true }) {
                             Label("Create Product", systemImage: "plus.circle.fill")
                                 .fontWeight(.semibold)
                         }
@@ -46,7 +40,10 @@ struct ProductsView: View {
                 } else {
                     List {
                         if !categories.isEmpty {
-                            Picker("Category", selection: $selectedCategory) {
+                            Picker("Category", selection: Binding(
+                                get: { viewModel.selectedCategory },
+                                set: { viewModel.selectedCategory = $0 }
+                            )) {
                                 Text("All Categories").tag(Optional<String>(nil))
                                 ForEach(categories, id: \.self) { category in
                                     Text(category).tag(Optional<String>(category))
@@ -61,52 +58,59 @@ struct ProductsView: View {
                     }
                 }
             }
-            .searchable(text: $searchText, prompt: "Search products")
+            .searchable(text: Binding(
+                get: { viewModel.searchText },
+                set: { viewModel.searchText = $0 }
+            ), prompt: "Search products")
             .navigationTitle("Products")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Button(action: { showCreateForm = true }) {
+                    Button(action: { viewModel.showCreateForm = true }) {
                         Image(systemName: "plus")
                     }
                 }
             }
-            .sheet(isPresented: $showCreateForm) {
+            .sheet(isPresented: Binding(
+                get: { viewModel.showCreateForm },
+                set: { viewModel.showCreateForm = $0 }
+            )) {
                 CreateProductSheet(
-                    isPresented: $showCreateForm,
+                    isPresented: Binding(
+                        get: { viewModel.showCreateForm },
+                        set: { viewModel.showCreateForm = $0 }
+                    ),
                     onSave: createProduct
                 )
             }
-            .alert("Error", isPresented: .constant(errorMessage != nil)) {
-                Button("OK") { errorMessage = nil }
+            .alert("Error", isPresented: Binding(
+                get: { productsContext.errorMessage != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        productsContext.errorMessage = nil
+                    }
+                }
+            )) {
+                Button("OK") { productsContext.errorMessage = nil }
             } message: {
-                Text(errorMessage ?? "An unknown error occurred")
+                Text(productsContext.errorMessage ?? "An unknown error occurred")
+            }
+            .onAppear {
+                productsContext.loadLocal(context: modelContext)
+                Task {
+                    await productsContext.fetch(context: modelContext)
+                }
             }
         }
     }
 
     private func createProduct(name: String, category: String, expirationDays: Int) {
         Task {
-            do {
-                _ = try await SyncService.shared.addProductAndSync(
-                    name: name,
-                    category: category,
-                    expirationDaysDelta: expirationDays,
-                    in: modelContext
-                )
-            } catch {
-                do {
-                    let product = Product(
-                        name: name,
-                        category: category,
-                        expirationDaysDelta: expirationDays
-                    )
-                    modelContext.insert(product)
-                    try modelContext.save()
-                    print("API failed, created product locally: \(error.localizedDescription)")
-                } catch {
-                    errorMessage = "Failed to create product: \(error.localizedDescription)"
-                }
-            }
+            await productsContext.add(
+                name: name,
+                category: category,
+                expirationDaysDelta: expirationDays,
+                context: modelContext
+            )
         }
     }
 }
