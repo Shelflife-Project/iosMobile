@@ -1,13 +1,23 @@
 import SwiftUI
-import SwiftData
 
 struct HomeView: View {
-    @Environment(\.modelContext) var modelContext
-    @Query var storages: [Storage]
+    @Environment(StorageContext.self) private var storageContext
 
     @State private var animateBox = true
     @State private var animateList = true
     @State private var animateCart = true
+
+    private var storages: [Storage] {
+        storageContext.storages
+    }
+
+    private var totalItems: Int {
+        storages.reduce(0) { $0 + $1.items.count }
+    }
+
+    private var totalShoppingItems: Int {
+        storages.reduce(0) { $0 + $1.shoppingItems.count }
+    }
 
     var body: some View {
         NavigationStack {
@@ -33,7 +43,6 @@ struct HomeView: View {
                     }
                     .buttonStyle(.plain)
 
-                    let totalItems = storages.reduce(0) { $0 + $1.items.count }
                     NavigationLink(destination: ProductsView()) {
                         StatCard(
                             title: "Items",
@@ -46,7 +55,6 @@ struct HomeView: View {
                     }
                     .buttonStyle(.plain)
 
-                    let totalShoppingItems = storages.reduce(0) { $0 + $1.shoppingItems.count }
                     NavigationLink(destination: ShoppingListView()) {
                         StatCard(
                             title: "Shopping List",
@@ -86,5 +94,4 @@ struct HomeView: View {
 
 #Preview {
     HomeView()
-        .modelContainer(for: [User.self, Storage.self, Product.self, StorageItem.self, ShoppingListItem.self], inMemory: true)
 }

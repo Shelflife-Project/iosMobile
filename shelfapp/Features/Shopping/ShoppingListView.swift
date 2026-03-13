@@ -1,9 +1,8 @@
 import SwiftUI
-import SwiftData
 
 struct ShoppingListView: View {
-    @Environment(\.modelContext) var modelContext
     @Environment(ShoppingListContext.self) private var shoppingListContext
+    @Environment(StorageContext.self) private var storageContext
     @State private var viewModel = ShoppingListViewModel()
 
     var body: some View {
@@ -48,10 +47,14 @@ struct ShoppingListView: View {
         .navigationTitle("Shopping List")
         .appGradientBackground()
         .onAppear {
-            shoppingListContext.loadLocal(context: modelContext)
+            Task {
+                await storageContext.fetch()
+                shoppingListContext.sync(from: storageContext.storages)
+            }
         }
         .refreshable {
-            shoppingListContext.loadLocal(context: modelContext)
+            await storageContext.fetch()
+            shoppingListContext.sync(from: storageContext.storages)
         }
     }
 }

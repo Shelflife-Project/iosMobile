@@ -1,8 +1,6 @@
 import SwiftUI
-import SwiftData
 
 struct NotificationsView: View {
-    @Environment(\.modelContext) var modelContext
     @Environment(NotificationsContext.self) private var notificationsContext
     @Environment(StorageContext.self) private var storageContext
     @State private var viewModel = NotificationsViewModel()
@@ -77,7 +75,7 @@ struct NotificationsView: View {
 
     private func acceptInvite(_ invite: PendingInviteInfo) {
         Task {
-            await notificationsContext.acceptInvite(invite, modelContext: modelContext, storageContext: storageContext)
+            await notificationsContext.acceptInvite(invite, storageContext: storageContext)
         }
     }
 

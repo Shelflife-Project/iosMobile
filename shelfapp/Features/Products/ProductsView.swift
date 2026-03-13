@@ -1,8 +1,6 @@
 import SwiftUI
-import SwiftData
 
 struct ProductsView: View {
-    @Environment(\.modelContext) var modelContext
     @Environment(ProductsContext.self) private var productsContext
     @State private var viewModel = ProductsViewModel()
 
@@ -95,9 +93,8 @@ struct ProductsView: View {
                 Text(productsContext.errorMessage ?? "An unknown error occurred")
             }
             .onAppear {
-                productsContext.loadLocal(context: modelContext)
                 Task {
-                    await productsContext.fetch(context: modelContext)
+                    await productsContext.fetch()
                 }
             }
         }
@@ -108,8 +105,7 @@ struct ProductsView: View {
             await productsContext.add(
                 name: name,
                 category: category,
-                expirationDaysDelta: expirationDays,
-                context: modelContext
+                expirationDaysDelta: expirationDays
             )
         }
     }
@@ -117,5 +113,4 @@ struct ProductsView: View {
 
 #Preview {
     ProductsView()
-        .modelContainer(for: [User.self, Storage.self, Product.self, StorageItem.self, ShoppingListItem.self], inMemory: true)
 }

@@ -1,8 +1,6 @@
 import SwiftUI
-import SwiftData
 
 struct StorageDetailView: View {
-    @Environment(\.modelContext) var modelContext
     @Environment(StorageDetailContext.self) private var storageDetailContext
     @Environment(ProfileContext.self) private var profileContext
     var storage: Storage
@@ -178,7 +176,7 @@ struct StorageDetailView: View {
         .onAppear {
             Task {
                 await storageDetailContext.fetchMembers(for: storage)
-                await storageDetailContext.syncItems(for: storage, context: modelContext)
+                await storageDetailContext.syncItems(for: storage)
             }
             viewModel.triggerAnimations()
         }
@@ -212,18 +210,17 @@ struct StorageDetailView: View {
 
     private func deleteItems(offsets: IndexSet) {
         Task {
-            await storageDetailContext.deleteItems(at: offsets, from: storage, context: modelContext)
+            await storageDetailContext.deleteItems(at: offsets, from: storage)
         }
     }
 
     private func deleteShoppingItems(offsets: IndexSet) {
         Task {
-            await storageDetailContext.deleteShoppingItems(at: offsets, from: storage, context: modelContext)
+            await storageDetailContext.deleteShoppingItems(at: offsets, from: storage)
         }
     }
 }
 
 #Preview {
     StorageDetailView(storage: Storage(name: "Fridge"))
-        .modelContainer(for: [User.self, Storage.self, Product.self, StorageItem.self, ShoppingListItem.self], inMemory: true)
 }

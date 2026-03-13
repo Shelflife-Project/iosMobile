@@ -1,8 +1,6 @@
 import SwiftUI
-import SwiftData
 
 struct StoragesView: View {
-    @Environment(\.modelContext) var modelContext
     @Environment(StorageContext.self) private var storageContext
     @Environment(ProfileContext.self) private var profileContext
     @State private var viewModel = StoragesViewModel()
@@ -129,9 +127,8 @@ struct StoragesView: View {
         }
         .onAppear {
             viewModel.triggerAnimations()
-            storageContext.loadLocal(context: modelContext)
             Task {
-                await storageContext.fetch(context: modelContext)
+                await storageContext.fetch()
             }
         }
     }
@@ -140,7 +137,6 @@ struct StoragesView: View {
         Task {
             await storageContext.add(
                 name: name,
-                context: modelContext,
                 currentUser: profileContext.currentUser
             )
         }
@@ -148,18 +144,17 @@ struct StoragesView: View {
 
     private func deleteStorage(_ storage: Storage) {
         Task {
-            await storageContext.delete(storage, context: modelContext)
+            await storageContext.delete(storage)
         }
     }
 
     private func leaveStorage(_ storage: Storage) {
         Task {
-            await storageContext.leave(storage, context: modelContext)
+            await storageContext.leave(storage)
         }
     }
 }
 
 #Preview {
     StoragesView()
-        .modelContainer(for: [User.self, Storage.self, Product.self, StorageItem.self, ShoppingListItem.self], inMemory: true)
 }

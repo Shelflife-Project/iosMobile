@@ -1,6 +1,5 @@
 import Foundation
 import Observation
-import SwiftData
 
 @MainActor
 @Observable
@@ -35,13 +34,13 @@ class NotificationsContext {
         }
     }
 
-    func acceptInvite(_ invite: PendingInviteInfo, modelContext: ModelContext, storageContext: StorageContext) async {
+    func acceptInvite(_ invite: PendingInviteInfo, storageContext: StorageContext) async {
         errorMessage = nil
 
         do {
             try await apiService.acceptInvite(inviteId: invite.id)
             invites.removeAll { $0.id == invite.id }
-            await storageContext.fetch(context: modelContext)
+            await storageContext.fetch()
         } catch {
             errorMessage = "Failed to accept invite: \(error.localizedDescription)"
         }

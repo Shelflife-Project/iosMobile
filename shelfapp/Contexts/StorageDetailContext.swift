@@ -1,6 +1,5 @@
 import Foundation
 import Observation
-import SwiftData
 
 @MainActor
 @Observable
@@ -24,18 +23,15 @@ class StorageDetailContext {
         members.filter { !$0.accepted }
     }
 
-    func syncItems(for storage: Storage, context: ModelContext) async {
+    func syncItems(for storage: Storage) async {
         guard let storageId = storage.serverId else { return }
 
         isSyncingItems = true
         defer { isSyncingItems = false }
 
         do {
-            let remoteItems = try await apiService.fetchStorageItems(storageId: storageId)
-            let remoteShopping = try await apiService.fetchShoppingItems(storageId: storageId)
-
-            try syncPersistedStorageItems(remoteItems, for: storage, context: context)
-            try syncPersistedShoppingItems(remoteShopping, for: storage, context: context)
+            storage.items = try await apiService.fetchStorageItems(storageId: storageId)
+            storage.shoppingItems = try await apiService.fetchShoppingItems(storageId: storageId)
         } catch {
             errorMessage = "Failed to sync items: \(error.localizedDescription)"
         }
@@ -62,7 +58,7 @@ class StorageDetailContext {
         }
     }
 
-    func addItem(to storage: Storage, product: Product, expiresAt: Date, context: ModelContext) async {
+    func addItem(to storage: Storage, product: Product, expiresAt: Date) async {
         errorMessage = nil
 
         do {
@@ -76,26 +72,10 @@ class StorageDetailContext {
                 expiresAt: expiresAt
             )
 
-            if let existing = storage.items.first(where: { $0.serverId == remoteItem.serverId }) {
-                existing.product = product
-                existing.expiresAt = remoteItem.expiresAt
-                existing.createdAt = remoteItem.createdAt
-            } else {
-                remoteItem.product = product
-                storage.items.append(remoteItem)
-                context.insert(remoteItem)
-            }
-
-            try context.save()
+            _ = remoteItem
+            await syncItems(for: storage)
         } catch {
-            do {
-                let localItem = StorageItem(product: product, expiresAt: expiresAt)
-                storage.items.append(localItem)
-                context.insert(localItem)
-                try context.save()
-            } catch {
-                errorMessage = "Failed to add item: \(error.localizedDescription)"
-            }
+            errorMessage = "Failed to add item: \(error.localizedDescription)"
         }
     }
 
@@ -132,36 +112,32 @@ class StorageDetailContext {
         }
     }
 
-    func deleteItems(at offsets: IndexSet, from storage: Storage, context: ModelContext) async {
+    func deleteItems(at offsets: IndexSet, from storage: Storage) async {
         for index in offsets.sorted(by: >) {
             let item = storage.items[index]
             do {
                 if let storageId = storage.serverId, let itemId = item.serverId {
                     try await apiService.deleteStorageItem(storageId: storageId, itemId: itemId)
                 }
-                storage.items.removeAll { $0.id == item.id }
-                context.delete(item)
-                try context.save()
             } catch {
                 errorMessage = "Failed to delete item: \(error.localizedDescription)"
             }
         }
+        await syncItems(for: storage)
     }
 
-    func deleteShoppingItems(at offsets: IndexSet, from storage: Storage, context: ModelContext) async {
+    func deleteShoppingItems(at offsets: IndexSet, from storage: Storage) async {
         for index in offsets.sorted(by: >) {
             let item = storage.shoppingItems[index]
             do {
                 if let storageId = storage.serverId, let itemId = item.serverId {
                     try await apiService.deleteShoppingItem(storageId: storageId, itemId: itemId)
                 }
-                storage.shoppingItems.removeAll { $0.id == item.id }
-                context.delete(item)
-                try context.save()
             } catch {
                 errorMessage = "Failed to delete shopping item: \(error.localizedDescription)"
             }
         }
+        await syncItems(for: storage)
     }
 
     private func seedOwnerAsMemberIfNeeded(_ storage: Storage) {
@@ -173,95 +149,5 @@ class StorageDetailContext {
                 at: 0
             )
         }
-    }
-
-    private func syncPersistedStorageItems(_ remoteItems: [StorageItem], for storage: Storage, context: ModelContext) throws {
-        let localItems = storage.items
-        var localByServerId: [Int: StorageItem] = [:]
-
-        for item in localItems {
-            if let serverId = item.serverId {
-                localByServerId[serverId] = item
-            }
-        }
-
-        let remoteServerIds = Set(remoteItems.compactMap { $0.serverId })
-
-        for remote in remoteItems {
-            guard let remoteId = remote.serverId else { continue }
-
-            if let existing = localByServerId[remoteId] {
-                existing.expiresAt = remote.expiresAt
-                existing.createdAt = remote.createdAt
-                if let remoteProductId = remote.product?.serverId,
-                   let localProduct = try findProduct(byServerId: remoteProductId, context: context) {
-                    existing.product = localProduct
-                }
-            } else {
-                if let remoteProductId = remote.product?.serverId,
-                   let localProduct = try findProduct(byServerId: remoteProductId, context: context) {
-                    remote.product = localProduct
-                }
-                storage.items.append(remote)
-                context.insert(remote)
-            }
-        }
-
-        for local in localItems {
-            guard let localId = local.serverId else { continue }
-            if !remoteServerIds.contains(localId) {
-                storage.items.removeAll { $0.id == local.id }
-                context.delete(local)
-            }
-        }
-
-        try context.save()
-    }
-
-    private func syncPersistedShoppingItems(_ remoteItems: [ShoppingListItem], for storage: Storage, context: ModelContext) throws {
-        let localItems = storage.shoppingItems
-        var localByServerId: [Int: ShoppingListItem] = [:]
-
-        for item in localItems {
-            if let serverId = item.serverId {
-                localByServerId[serverId] = item
-            }
-        }
-
-        let remoteServerIds = Set(remoteItems.compactMap { $0.serverId })
-
-        for remote in remoteItems {
-            guard let remoteId = remote.serverId else { continue }
-
-            if let existing = localByServerId[remoteId] {
-                existing.amountToBuy = remote.amountToBuy
-                if let remoteProductId = remote.product?.serverId,
-                   let localProduct = try findProduct(byServerId: remoteProductId, context: context) {
-                    existing.product = localProduct
-                }
-            } else {
-                if let remoteProductId = remote.product?.serverId,
-                   let localProduct = try findProduct(byServerId: remoteProductId, context: context) {
-                    remote.product = localProduct
-                }
-                remote.storage = storage
-                storage.shoppingItems.append(remote)
-                context.insert(remote)
-            }
-        }
-
-        for local in localItems {
-            guard let localId = local.serverId else { continue }
-            if !remoteServerIds.contains(localId) {
-                storage.shoppingItems.removeAll { $0.id == local.id }
-                context.delete(local)
-            }
-        }
-
-        try context.save()
-    }
-
-    private func findProduct(byServerId serverId: Int, context: ModelContext) throws -> Product? {
-        try context.fetch(FetchDescriptor<Product>()).first(where: { $0.serverId == serverId })
     }
 }

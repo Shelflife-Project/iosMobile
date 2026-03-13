@@ -1,10 +1,8 @@
 import SwiftUI
-import SwiftData
 
 struct AddItemSheet: View {
     var storage: Storage
     @Binding var isPresented: Bool
-    @Environment(\.modelContext) var modelContext
     @Environment(ProductsContext.self) private var productsContext
     @Environment(StorageDetailContext.self) private var storageDetailContext
     @State private var selectedProduct: Product?
@@ -56,7 +54,9 @@ struct AddItemSheet: View {
                 }
             }
             .onAppear {
-                productsContext.loadLocal(context: modelContext)
+                Task {
+                    await productsContext.fetch()
+                }
             }
         }
     }
@@ -66,8 +66,7 @@ struct AddItemSheet: View {
             await storageDetailContext.addItem(
                 to: storage,
                 product: product,
-                expiresAt: expirationDate,
-                context: modelContext
+                expiresAt: expirationDate
             )
         }
     }
