@@ -1,11 +1,8 @@
 import SwiftUI
-import SwiftData
 
 struct RootView: View {
-    @Environment(\.modelContext) var modelContext
     @State private var authContext = AuthContext()
     @State private var selectedTab: TabItem = .home
-    @State private var isSyncing = false
     @State private var notificationsContext = NotificationsContext()
     @State private var shoppingListContext = ShoppingListContext()
     @State private var profileContext = ProfileContext()
@@ -35,7 +32,12 @@ struct RootView: View {
     }
 
     var body: some View {
-        if authContext.isAuthenticated {
+        Group {
+            if !authContext.hasCheckedSession && authContext.token != nil {
+                ProgressView("Loading...")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .appGradientBackground()
+            } else if authContext.isLoggedIn {
             TabView(selection: $selectedTab) {
                 HomeView()
                     .tabItem {
@@ -61,32 +63,28 @@ struct RootView: View {
             .environment(productsContext)
             .environment(storageDetailContext)
             .environment(authContext)
-            .task {
-                await syncData()
+            } else {
+                LoginView()
+                    .environment(authContext)
             }
-        } else {
-            LoginView()
-                .environment(authContext)
+        }
+        .task {
+            await bootstrap()
         }
     }
 
-    private func syncData() async {
-        isSyncing = true
-
-        // Verify stored session is still valid before syncing
-        if authContext.isAuthenticated {
-            let isSessionValid = await authContext.refreshCurrentUser()
-            profileContext.sync(from: authContext)
-            if !isSessionValid {
-                isSyncing = false
-                return
-            }
+    private func bootstrap() async {
+        if authContext.token != nil && !authContext.hasCheckedSession {
+            _ = await authContext.me()
         }
 
-        await productsContext.fetch(context: modelContext)
-        await storageContext.fetch(context: modelContext)
-        shoppingListContext.loadLocal(context: modelContext)
         profileContext.sync(from: authContext)
-        isSyncing = false
+
+        guard authContext.isLoggedIn else { return }
+
+        await productsContext.fetch()
+        await storageContext.fetch()
+        shoppingListContext.sync(from: storageContext.storages)
+        await notificationsContext.fetchInvites()
     }
 }

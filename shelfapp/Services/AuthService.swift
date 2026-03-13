@@ -1,25 +1,55 @@
 import Foundation
+import Security
 
 class AuthService {
     static let shared = AuthService()
 
     private let apiService = APIService.shared
     private let tokenKey = "shelflife_auth_token"
-    private let userKey = "shelflife_user"
 
     // MARK: - Token Management
 
     func getStoredToken() -> String? {
-        UserDefaults.standard.string(forKey: tokenKey)
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: tokenKey,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+
+        guard status == errSecSuccess,
+              let data = item as? Data,
+              let token = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+
+        return token
     }
 
     func saveToken(_ token: String) {
-        UserDefaults.standard.set(token, forKey: tokenKey)
+        clearToken()
+
+        let data = Data(token.utf8)
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: tokenKey,
+            kSecValueData as String: data
+        ]
+
+        SecItemAdd(query as CFDictionary, nil)
         APIService.shared.setToken(token)
     }
 
     func clearToken() {
-        UserDefaults.standard.removeObject(forKey: tokenKey)
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: tokenKey
+        ]
+
+        SecItemDelete(query as CFDictionary)
         APIService.shared.setToken(nil)
     }
 
@@ -64,13 +94,7 @@ class AuthService {
 
         saveToken(loginResponse.token)
 
-        // Fetch user info
-        do {
-            let user = try await fetchCurrentUser()
-            saveUser(user)
-        } catch {
-            print("Failed to fetch user info: \(error)")
-        }
+        // User profile is fetched by AuthContext via /me.
     }
 
     // MARK: - Register
@@ -121,9 +145,7 @@ class AuthService {
             throw APIError.serverError(statusCode: httpResponse.statusCode)
         }
 
-        let decoder = JSONDecoder()
-        let user = try decoder.decode(UserDTO.self, from: data)
-        saveUser(user.toDomain())
+        _ = try JSONDecoder().decode(UserDTO.self, from: data)
     }
 
     // MARK: - User
@@ -150,31 +172,11 @@ class AuthService {
 
         let decoder = JSONDecoder()
         let userDTO = try decoder.decode(UserDTO.self, from: data)
-        let user = userDTO.toDomain()
-
-        saveUser(user)
-        return user
-    }
-
-    func getStoredUser() -> User? {
-        guard let data = UserDefaults.standard.data(forKey: userKey) else {
-            return nil
-        }
-
-        let decoder = JSONDecoder()
-        return try? decoder.decode(User.self, from: data)
-    }
-
-    func saveUser(_ user: User) {
-        let encoder = JSONEncoder()
-        if let data = try? encoder.encode(user) {
-            UserDefaults.standard.set(data, forKey: userKey)
-        }
+        return userDTO.toDomain()
     }
 
     func logout() {
         clearToken()
-        UserDefaults.standard.removeObject(forKey: userKey)
     }
 
     // MARK: - Computed Properties

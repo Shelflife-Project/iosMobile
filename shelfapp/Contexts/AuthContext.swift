@@ -4,10 +4,15 @@ import Foundation
 @MainActor
 @Observable
 class AuthContext {
-    var isAuthenticated = false
-    var currentUser: User?
+    var user: User?
+    var isLoggedIn = false
     var isLoading = false
     var errorMessage: String?
+    var hasCheckedSession = false
+
+    var token: String? {
+        authService.getStoredToken()
+    }
 
     private let authService: AuthService
     private let apiService: APIService
@@ -18,23 +23,17 @@ class AuthContext {
 
         let storedToken = authService.getStoredToken()
         apiService.configure(baseURL: AppConfig.baseURL, token: storedToken)
-        restoreSessionFromStorage()
-    }
-
-    func restoreSessionFromStorage() {
-        if let token = authService.getStoredToken(), !token.isEmpty {
-            apiService.setToken(token)
-            currentUser = authService.getStoredUser()
-            isAuthenticated = true
-        } else {
-            isAuthenticated = false
-            currentUser = nil
-        }
+        isLoggedIn = storedToken?.isEmpty == false
     }
 
     @discardableResult
-    func refreshCurrentUser() async -> Bool {
+    func me() async -> Bool {
+        isLoading = true
         errorMessage = nil
+        defer {
+            isLoading = false
+            hasCheckedSession = true
+        }
 
         guard authService.getStoredToken() != nil else {
             logout()
@@ -42,9 +41,8 @@ class AuthContext {
         }
 
         do {
-            let user = try await authService.fetchCurrentUser()
-            currentUser = user
-            isAuthenticated = true
+            user = try await authService.fetchCurrentUser()
+            isLoggedIn = true
             return true
         } catch {
             errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
@@ -63,15 +61,14 @@ class AuthContext {
             if let token = authService.getStoredToken() {
                 apiService.setToken(token)
             }
-            currentUser = authService.getStoredUser()
-            isAuthenticated = true
+            _ = await me()
         } catch {
             errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-            isAuthenticated = false
+            isLoggedIn = false
         }
     }
 
-    func signup(username: String, email: String, password: String, passwordRepeat: String) async {
+    func register(username: String, email: String, password: String, passwordRepeat: String) async {
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
@@ -89,10 +86,14 @@ class AuthContext {
         }
     }
 
+    func signup(username: String, email: String, password: String, passwordRepeat: String) async {
+        await register(username: username, email: email, password: password, passwordRepeat: passwordRepeat)
+    }
+
     func logout() {
         authService.logout()
         apiService.setToken(nil)
-        isAuthenticated = false
-        currentUser = nil
+        isLoggedIn = false
+        user = nil
     }
 }

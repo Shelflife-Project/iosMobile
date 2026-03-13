@@ -9,8 +9,8 @@ class ProfileContext {
     var errorMessage: String?
 
     func sync(from authContext: AuthContext) {
-        currentUser = authContext.currentUser
-        isAuthenticated = authContext.isAuthenticated
+        currentUser = authContext.user
+        isAuthenticated = authContext.isLoggedIn
     }
 
     func refreshCurrentUser(authContext: AuthContext) async {
@@ -18,7 +18,7 @@ class ProfileContext {
         errorMessage = nil
         defer { isLoading = false }
 
-        _ = await authContext.refreshCurrentUser()
+        _ = await authContext.me()
         errorMessage = authContext.errorMessage
         sync(from: authContext)
     }
