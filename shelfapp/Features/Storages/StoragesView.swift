@@ -3,41 +3,36 @@ import SwiftData
 
 struct StoragesView: View {
     @Environment(\.modelContext) var modelContext
-    @Query(sort: \Storage.name) var storages: [Storage]
-    @State private var showCreateForm = false
-    @State private var newStorageName = ""
-    @State private var isLoading = false
-    @State private var errorMessage: String?
-
-    @State private var animateBox = true
-    @State private var animateShared = true
+    @Environment(StorageContext.self) private var storageContext
+    @Environment(ProfileContext.self) private var profileContext
+    @State private var viewModel = StoragesViewModel()
 
     private var currentUsername: String? {
-        AuthManager.shared.currentUser?.username
+        profileContext.currentUser?.username
     }
 
     private var ownedStorages: [Storage] {
-        storages.filter { $0.owner?.username == currentUsername }
+        viewModel.ownedStorages(from: storageContext.storages, currentUsername: currentUsername)
     }
 
     private var memberStorages: [Storage] {
-        storages.filter { $0.owner?.username != currentUsername }
+        viewModel.memberStorages(from: storageContext.storages, currentUsername: currentUsername)
     }
 
     var body: some View {
         Group {
-            if storages.isEmpty {
+            if storageContext.storages.isEmpty {
                 VStack(spacing: 16) {
                     Image(systemName: "shippingbox")
                         .font(.system(size: 48))
                         .foregroundStyle(.gray)
-                        .symbolEffect(.wiggle, isActive: animateBox)
+                        .symbolEffect(.wiggle, isActive: viewModel.animateBox)
                     Text("No Storages")
                         .font(.headline)
                     Text("Create your first storage to get started")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Button(action: { showCreateForm = true }) {
+                    Button(action: { viewModel.showCreateForm = true }) {
                         Label("Create Storage", systemImage: "plus.circle.fill")
                             .fontWeight(.semibold)
                     }
@@ -64,7 +59,7 @@ struct StoragesView: View {
                             HStack(spacing: 6) {
                                 Image(systemName: "crown.fill")
                                     .foregroundStyle(.yellow)
-                                    .symbolEffect(.wiggle, isActive: animateBox)
+                                    .symbolEffect(.wiggle, isActive: viewModel.animateBox)
                                 Text("My Storages")
                             }
                         }
@@ -89,7 +84,7 @@ struct StoragesView: View {
                             HStack(spacing: 6) {
                                 Image(systemName: "person.2.fill")
                                     .foregroundStyle(.blue)
-                                    .symbolEffect(.drawOn, isActive: animateShared)
+                                    .symbolEffect(.drawOn, isActive: viewModel.animateShared)
                                 Text("Shared with Me")
                             }
                         }
@@ -103,79 +98,64 @@ struct StoragesView: View {
         .appGradientBackground()
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button(action: { showCreateForm = true }) {
+                Button(action: { viewModel.showCreateForm = true }) {
                     Image(systemName: "plus")
                 }
             }
         }
-        .sheet(isPresented: $showCreateForm) {
+        .sheet(isPresented: Binding(
+            get: { viewModel.showCreateForm },
+            set: { viewModel.showCreateForm = $0 }
+        )) {
             CreateStorageSheet(
-                isPresented: $showCreateForm,
+                isPresented: Binding(
+                    get: { viewModel.showCreateForm },
+                    set: { viewModel.showCreateForm = $0 }
+                ),
                 onSave: createStorage
             )
         }
-        .alert("Error", isPresented: .constant(errorMessage != nil)) {
-            Button("OK") { errorMessage = nil }
+        .alert("Error", isPresented: Binding(
+            get: { storageContext.errorMessage != nil },
+            set: { isPresented in
+                if !isPresented {
+                    storageContext.errorMessage = nil
+                }
+            }
+        )) {
+            Button("OK") { storageContext.errorMessage = nil }
         } message: {
-            Text(errorMessage ?? "An unknown error occurred")
+            Text(storageContext.errorMessage ?? "An unknown error occurred")
         }
         .onAppear {
-            triggerAnimations()
-        }
-    }
-
-    private func triggerAnimations() {
-        animateBox = true
-        animateShared = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            withAnimation(.easeInOut(duration: 0.6)) { animateBox = false }
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-            withAnimation(.easeInOut(duration: 0.6)) { animateShared = false }
+            viewModel.triggerAnimations()
+            storageContext.loadLocal(context: modelContext)
+            Task {
+                await storageContext.fetch(context: modelContext)
+            }
         }
     }
 
     private func createStorage(name: String) {
-        isLoading = true
         Task {
-            do {
-                _ = try await SyncService.shared.createStorageAndSync(name: name, in: modelContext)
-                newStorageName = ""
-            } catch {
-                do {
-                    let localStorage = Storage(name: name, owner: AuthManager.shared.currentUser)
-                    modelContext.insert(localStorage)
-                    try modelContext.save()
-                    newStorageName = ""
-                    print("API failed, created storage locally: \(error.localizedDescription)")
-                } catch {
-                    errorMessage = "Failed to create storage: \(error.localizedDescription)"
-                }
-            }
-            isLoading = false
+            await storageContext.add(
+                name: name,
+                context: modelContext,
+                currentUser: profileContext.currentUser
+            )
         }
     }
 
     private func deleteStorage(_ storage: Storage) {
         Task {
-            do {
-                try await SyncService.shared.deleteStorageAndSync(storage, in: modelContext)
-            } catch {
-                errorMessage = "Failed to delete storage: \(error.localizedDescription)"
-            }
+            await storageContext.delete(storage, context: modelContext)
         }
-        modelContext.delete(storage)
     }
 
     private func leaveStorage(_ storage: Storage) {
         Task {
-            do {
-                try await SyncService.shared.deleteStorageAndSync(storage, in: modelContext)
-            } catch {
-                errorMessage = "Failed to leave storage: \(error.localizedDescription)"
-            }
+            await storageContext.leave(storage, context: modelContext)
         }
-        modelContext.delete(storage)
     }
 }
 
