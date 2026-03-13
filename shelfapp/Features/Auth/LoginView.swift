@@ -25,7 +25,7 @@ struct LoginView: View {
                 .padding(.top, 40)
                 .padding(.bottom, 20)
 
-                Picker("Auth Mode", selection: $selectedTab) {
+                Picker("Auth Mode", selection: selectedTab) {
                     Text("Login").tag(LoginViewModel.AuthTab.login)
                     Text("Sign Up").tag(LoginViewModel.AuthTab.signup)
                 }

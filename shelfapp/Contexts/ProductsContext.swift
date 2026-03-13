@@ -1,5 +1,6 @@
 import Observation
 import SwiftData
+import Foundation
 
 @MainActor
 @Observable

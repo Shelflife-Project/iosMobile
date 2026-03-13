@@ -1,3 +1,4 @@
+import Foundation
 import Observation
 import SwiftData
 
@@ -42,6 +43,7 @@ class StorageDetailContext {
 
     func fetchMembers(for storage: Storage) async {
         guard let storageServerId = storage.serverId else {
+            members = []
             seedOwnerAsMemberIfNeeded(storage)
             return
         }
@@ -131,7 +133,7 @@ class StorageDetailContext {
     }
 
     func deleteItems(at offsets: IndexSet, from storage: Storage, context: ModelContext) async {
-        for index in offsets {
+        for index in offsets.sorted(by: >) {
             let item = storage.items[index]
             do {
                 if let storageId = storage.serverId, let itemId = item.serverId {
@@ -147,7 +149,7 @@ class StorageDetailContext {
     }
 
     func deleteShoppingItems(at offsets: IndexSet, from storage: Storage, context: ModelContext) async {
-        for index in offsets {
+        for index in offsets.sorted(by: >) {
             let item = storage.shoppingItems[index]
             do {
                 if let storageId = storage.serverId, let itemId = item.serverId {
