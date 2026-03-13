@@ -3,20 +3,18 @@ import SwiftData
 
 struct RootView: View {
     @Environment(\.modelContext) var modelContext
-    @State private var authManager = AuthManager.shared
+    @State private var authContext = AuthContext()
     @State private var selectedTab: TabItem = .home
     @State private var isSyncing = false
-    
+    @State private var notificationsContext = NotificationsContext()
+    @State private var shoppingListContext = ShoppingListContext()
+    @State private var profileContext = ProfileContext()
+    @State private var productsContext = ProductsContext()
+    @State private var storageDetailContext = StorageDetailContext()
+
     @State private var storageContext = StorageContext()
 
-    init() { 
-        // Load stored token if available
-        let storedToken = AuthService.shared.getStoredToken()
-        APIService.shared.configure(
-            baseURL: AppConfig.baseURL,
-            token: storedToken
-        )
-    }
+    init() {}
 
     enum TabItem: String, CaseIterable {
         case home = "Home"
@@ -37,7 +35,7 @@ struct RootView: View {
     }
 
     var body: some View {
-        if authManager.isAuthenticated {
+        if authContext.isAuthenticated {
             TabView(selection: $selectedTab) {
                 HomeView()
                     .tabItem {
@@ -57,38 +55,38 @@ struct RootView: View {
                     .tag(TabItem.profile)
             }
             .environment(storageContext)
+            .environment(notificationsContext)
+            .environment(shoppingListContext)
+            .environment(profileContext)
+            .environment(productsContext)
+            .environment(storageDetailContext)
+            .environment(authContext)
             .task {
                 await syncData()
             }
         } else {
             LoginView()
+                .environment(authContext)
         }
     }
 
     private func syncData() async {
         isSyncing = true
 
-        // Verify the stored token is still valid before syncing
-        if AuthService.shared.getStoredToken() != nil {
-            do {
-                let user = try await AuthService.shared.fetchCurrentUser()
-                authManager.currentUser = user
-            } catch {
-                // Token is expired or invalid — force re-login
-                print("Token validation failed: \(error.localizedDescription)")
-                authManager.logout()
+        // Verify stored session is still valid before syncing
+        if authContext.isAuthenticated {
+            let isSessionValid = await authContext.refreshCurrentUser()
+            profileContext.sync(from: authContext)
+            if !isSessionValid {
                 isSyncing = false
                 return
             }
         }
 
-        do {
-            // Sync products and storages from API
-            try await SyncService.shared.syncProducts(in: modelContext)
-            try await SyncService.shared.syncStorages(in: modelContext)
-        } catch {
-            print("Sync failed (using local data): \(error.localizedDescription)")
-        }
+        await productsContext.fetch(context: modelContext)
+        await storageContext.fetch(context: modelContext)
+        shoppingListContext.loadLocal(context: modelContext)
+        profileContext.sync(from: authContext)
         isSyncing = false
     }
 }

@@ -2,16 +2,7 @@ import SwiftUI
 
 struct LoginView: View {
     @Environment(\.colorScheme) var colorScheme
-    @State private var selectedTab: AuthTab = .login
-    @State private var email = ""
-    @State private var password = ""
-    @State private var username = ""
-    @State private var passwordRepeat = ""
-
-    enum AuthTab {
-        case login
-        case signup
-    }
+    @State private var viewModel = LoginViewModel()
 
     private var color: Color {
         colorScheme == .dark ? Color(.indigo) : Color(.cyan)
@@ -35,20 +26,20 @@ struct LoginView: View {
                 .padding(.bottom, 20)
 
                 Picker("Auth Mode", selection: $selectedTab) {
-                    Text("Login").tag(AuthTab.login)
-                    Text("Sign Up").tag(AuthTab.signup)
+                    Text("Login").tag(LoginViewModel.AuthTab.login)
+                    Text("Sign Up").tag(LoginViewModel.AuthTab.signup)
                 }
                 .pickerStyle(.segmented)
                 .padding(.horizontal)
 
-                if selectedTab == .login {
-                    LoginFormView(email: $email, password: $password)
+                if viewModel.selectedTab == .login {
+                    LoginFormView(email: $viewModel.email, password: $viewModel.password)
                 } else {
                     SignupFormView(
-                        username: $username,
-                        email: $email,
-                        password: $password,
-                        passwordRepeat: $passwordRepeat
+                        username: $viewModel.username,
+                        email: $viewModel.email,
+                        password: $viewModel.password,
+                        passwordRepeat: $viewModel.passwordRepeat
                     )
                 }
 
@@ -56,6 +47,13 @@ struct LoginView: View {
             }
             .padding()
             .appGradientBackground()
+    }
+
+    private var selectedTab: Binding<LoginViewModel.AuthTab> {
+        Binding(
+            get: { viewModel.selectedTab },
+            set: { viewModel.selectedTab = $0 }
+        )
     }
 }
 

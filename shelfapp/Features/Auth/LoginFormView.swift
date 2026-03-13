@@ -2,11 +2,9 @@ import SwiftUI
 
 struct LoginFormView: View {
     @Environment(\.colorScheme) var colorScheme
+    @Environment(AuthContext.self) private var authContext
     @Binding var email: String
     @Binding var password: String
-    @State private var errorMessage: String?
-    @State private var isLoading = false
-    var authManager = AuthManager.shared
 
     private var color: Color {
         colorScheme == .dark ? Color(.indigo) : Color(.cyan)
@@ -27,7 +25,7 @@ struct LoginFormView: View {
                 AnimatedSecureTextField(text: $password, titleKey: "Password...")
             }
 
-            if let error = errorMessage {
+            if let error = authContext.errorMessage {
                 Spacer()
                 HStack {
                     Image(systemName: "exclamationmark.circle.fill")
@@ -45,7 +43,7 @@ struct LoginFormView: View {
 
             Spacer()
             Button(action: login) {
-                if isLoading {
+                if authContext.isLoading {
                     ProgressView()
                         .tint(.white)
                 } else {
@@ -58,22 +56,14 @@ struct LoginFormView: View {
             .background(color)
             .foregroundStyle(.white)
             .cornerRadius(8)
-            .disabled(isLoading || email.isEmpty || password.isEmpty)
+            .disabled(authContext.isLoading || email.isEmpty || password.isEmpty)
             .shadow(radius: 4, x: 3, y: 3)
         }
     }
 
     private func login() {
-        isLoading = true
-        errorMessage = nil
-
         Task {
-            await authManager.login(email: email, password: password)
-            isLoading = false
-
-            if let error = authManager.errorMessage {
-                errorMessage = error
-            }
+            await authContext.login(email: email, password: password)
         }
     }
 }

@@ -2,13 +2,11 @@ import SwiftUI
 
 struct SignupFormView: View {
     @Environment(\.colorScheme) var colorScheme
+    @Environment(AuthContext.self) private var authContext
     @Binding var username: String
     @Binding var email: String
     @Binding var password: String
     @Binding var passwordRepeat: String
-    @State private var errorMessage: String?
-    @State private var isLoading = false
-    var authManager = AuthManager.shared
 
     private var color: Color {
         colorScheme == .dark ? Color(.indigo) : Color(.cyan)
@@ -48,7 +46,7 @@ struct SignupFormView: View {
                     .shadow(radius: 4, x: 3, y: 3)
             }
 
-            if let error = errorMessage {
+            if let error = authContext.errorMessage {
                 Spacer()
                 HStack {
                     Image(systemName: "exclamationmark.circle.fill")
@@ -66,7 +64,7 @@ struct SignupFormView: View {
             Spacer()
 
             Button(action: signup) {
-                if isLoading {
+                if authContext.isLoading {
                     ProgressView()
                         .tint(.white)
                 } else {
@@ -79,26 +77,18 @@ struct SignupFormView: View {
             .background(color)
             .foregroundStyle(.white)
             .cornerRadius(8)
-            .disabled(isLoading || username.isEmpty || email.isEmpty || password.isEmpty || passwordRepeat.isEmpty)
+            .disabled(authContext.isLoading || username.isEmpty || email.isEmpty || password.isEmpty || passwordRepeat.isEmpty)
         }
     }
 
     private func signup() {
-        isLoading = true
-        errorMessage = nil
-
         Task {
-            await authManager.signup(
+            await authContext.signup(
                 username: username,
                 email: email,
                 password: password,
                 passwordRepeat: passwordRepeat
             )
-            isLoading = false
-
-            if let error = authManager.errorMessage {
-                errorMessage = error
-            }
         }
     }
 }
