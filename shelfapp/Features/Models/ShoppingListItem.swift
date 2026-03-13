@@ -6,14 +6,12 @@
 //
 
 import Foundation
-import SwiftData
 
-@Model
-final class ShoppingListItem: Identifiable {
-    @Attribute(.unique) var id: UUID = UUID()
+final class ShoppingListItem: Identifiable, Hashable {
+    var id: UUID = UUID()
     var serverId: Int?
-    @Relationship var storage: Storage?
-    @Relationship var product: Product?
+    var storage: Storage?
+    var product: Product?
     var amountToBuy: Int = 1
 
     init(storage: Storage? = nil, product: Product? = nil, amountToBuy: Int = 1, serverId: Int? = nil) {
@@ -22,4 +20,13 @@ final class ShoppingListItem: Identifiable {
         self.amountToBuy = amountToBuy
         self.serverId = serverId
     }
+
+    static func == (lhs: ShoppingListItem, rhs: ShoppingListItem) -> Bool {
+        lhs.id == rhs.id
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
 }
+

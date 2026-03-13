@@ -1,5 +1,4 @@
 import Foundation
-import SwiftData
 
 enum APIError: LocalizedError {
     case invalidURL

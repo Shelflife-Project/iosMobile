@@ -6,13 +6,11 @@
 //
 
 import Foundation
-import SwiftData
 
-@Model
-final class StorageItem: Identifiable {
-    @Attribute(.unique) var id: UUID = UUID()
+final class StorageItem: Identifiable, Hashable {
+    var id: UUID = UUID()
     var serverId: Int?
-    @Relationship var product: Product?
+    var product: Product?
     var expiresAt: Date?
     var createdAt: Date
 
@@ -21,5 +19,13 @@ final class StorageItem: Identifiable {
         self.expiresAt = expiresAt
         self.createdAt = createdAt
         self.serverId = serverId
+    }
+
+    static func == (lhs: StorageItem, rhs: StorageItem) -> Bool {
+        lhs.id == rhs.id
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
     }
 }

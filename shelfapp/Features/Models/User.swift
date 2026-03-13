@@ -6,11 +6,9 @@
 //
 
 import Foundation
-import SwiftData
 
-@Model
-final class User: Identifiable, Codable {
-    @Attribute(.unique) var id: UUID = UUID()
+final class User: Identifiable, Codable, Hashable {
+    var id: UUID = UUID()
     var serverId: Int?
     var username: String
     var email: String?
@@ -50,5 +48,13 @@ final class User: Identifiable, Codable {
         username = try container.decode(String.self, forKey: .username)
         email = try container.decodeIfPresent(String.self, forKey: .email)
         admin = try container.decodeIfPresent(Bool.self, forKey: .admin) ?? false
+    }
+
+    static func == (lhs: User, rhs: User) -> Bool {
+        lhs.id == rhs.id
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
     }
 }
