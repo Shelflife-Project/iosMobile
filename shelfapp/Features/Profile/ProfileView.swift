@@ -1,7 +1,9 @@
 import SwiftUI
 
 struct ProfileView: View {
-    @State private var authManager = AuthManager.shared
+    @Environment(ProfileContext.self) private var profileContext
+    @Environment(AuthContext.self) private var authContext
+    @State private var viewModel = ProfileViewModel()
 
     var body: some View {
         NavigationStack {
@@ -10,14 +12,14 @@ struct ProfileView: View {
                     HStack {
                         Text("Username")
                         Spacer()
-                        Text(authManager.currentUser?.username ?? "N/A")
+                        Text(viewModel.displayValue(profileContext.currentUser?.username))
                             .foregroundStyle(.secondary)
                     }
 
                     HStack {
                         Text("Email")
                         Spacer()
-                        Text(authManager.currentUser?.email ?? "N/A")
+                        Text(viewModel.displayValue(profileContext.currentUser?.email))
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -35,14 +37,14 @@ struct ProfileView: View {
                     HStack {
                         Text("Version")
                         Spacer()
-                        Text("1.0.0")
+                        Text(viewModel.appVersion)
                             .foregroundStyle(.secondary)
                     }
 
                     HStack {
                         Text("App Name")
                         Spacer()
-                        Text("Shelf Life")
+                        Text(viewModel.appName)
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -59,11 +61,16 @@ struct ProfileView: View {
                 }
             }
             .navigationTitle("Profile")
+            .onAppear {
+                Task {
+                    await profileContext.refreshCurrentUser(authContext: authContext)
+                }
+            }
         }
     }
 
     private func logout() {
-        authManager.logout()
+        profileContext.logout(authContext: authContext)
     }
 }
 
