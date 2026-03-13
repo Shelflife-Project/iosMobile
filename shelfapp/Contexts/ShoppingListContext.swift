@@ -15,6 +15,32 @@ class ShoppingListContext {
         self.apiService = apiService
     }
 
+    func fetchAll(storages: [Storage]) async {
+        isLoading = true
+        errorMessage = nil
+        selectedStorageId = nil
+        defer { isLoading = false }
+
+        do {
+            var allItems: [ShoppingListItem] = []
+
+            for storage in storages {
+                guard let storageId = storage.serverId else { continue }
+                let remoteItems = try await apiService.fetchShoppingItems(storageId: storageId)
+                for item in remoteItems {
+                    item.storage = storage
+                }
+                storage.shoppingItems = remoteItems
+                allItems.append(contentsOf: remoteItems)
+            }
+
+            items = allItems
+        } catch {
+            errorMessage = "Failed to fetch shopping items: \(error.localizedDescription)"
+            items = []
+        }
+    }
+
     func sync(from storages: [Storage]) {
         let allItems = storages.flatMap { $0.shoppingItems }
         if let selectedStorageId {

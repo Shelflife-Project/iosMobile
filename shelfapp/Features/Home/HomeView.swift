@@ -2,6 +2,8 @@ import SwiftUI
 
 struct HomeView: View {
     @Environment(StorageContext.self) private var storageContext
+    @Environment(ProductsContext.self) private var productsContext
+    @Environment(ShoppingListContext.self) private var shoppingListContext
 
     @State private var animateBox = true
     @State private var animateList = true
@@ -11,12 +13,12 @@ struct HomeView: View {
         storageContext.storages
     }
 
-    private var totalItems: Int {
-        storages.reduce(0) { $0 + $1.items.count }
+    private var totalProducts: Int {
+        productsContext.products.count
     }
 
     private var totalShoppingItems: Int {
-        storages.reduce(0) { $0 + $1.shoppingItems.count }
+        shoppingListContext.items.count
     }
 
     var body: some View {
@@ -45,8 +47,8 @@ struct HomeView: View {
 
                     NavigationLink(destination: ProductsView()) {
                         StatCard(
-                            title: "Items",
-                            value: "\(totalItems)",
+                            title: "Products",
+                            value: "\(totalProducts)",
                             icon: "list.bullet.rectangle",
                             color: .green,
                             animationStyle: .drawOn,

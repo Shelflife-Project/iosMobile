@@ -3,6 +3,8 @@ import SwiftUI
 struct RootView: View {
     @State private var authContext = AuthContext()
     @State private var selectedTab: TabItem = .home
+    @State private var isBootstrappingData = false
+    @State private var hasBootstrappedData = false
     @State private var notificationsContext = NotificationsContext()
     @State private var shoppingListContext = ShoppingListContext()
     @State private var profileContext = ProfileContext()
@@ -35,6 +37,10 @@ struct RootView: View {
         Group {
             if !authContext.hasCheckedSession && authContext.token != nil {
                 ProgressView("Loading...")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .appGradientBackground()
+            } else if authContext.isLoggedIn && (!hasBootstrappedData || isBootstrappingData) {
+                ProgressView("Loading your data...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .appGradientBackground()
             } else if authContext.isLoggedIn {
@@ -82,9 +88,17 @@ struct RootView: View {
 
         guard authContext.isLoggedIn else { return }
 
+        if hasBootstrappedData { return }
+
+        isBootstrappingData = true
+        defer {
+            isBootstrappingData = false
+            hasBootstrappedData = true
+        }
+
         await productsContext.fetch()
         await storageContext.fetch()
-        shoppingListContext.sync(from: storageContext.storages)
+        await shoppingListContext.fetchAll(storages: storageContext.storages)
         await notificationsContext.fetchInvites()
     }
 }
