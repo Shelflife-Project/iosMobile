@@ -4,6 +4,9 @@ struct HomeView: View {
     @Environment(StorageContext.self) private var storageContext
     @Environment(ProductsContext.self) private var productsContext
     @Environment(ShoppingListContext.self) private var shoppingListContext
+    @Environment(ProfileContext.self) private var profileContext
+    @Environment(AuthContext.self) private var authContext
+    @Environment(NotificationsContext.self) private var notificationsContext
 
     @State private var animateBox = true
     @State private var animateList = true
@@ -77,6 +80,9 @@ struct HomeView: View {
             .appGradientBackground()
             .onAppear {
                 triggerStaggeredAnimations()
+                Task {
+                    await refreshContexts()
+                }
             }
         }
     }
@@ -91,6 +97,14 @@ struct HomeView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
             withAnimation(.easeInOut(duration: 0.6)) { animateCart = false }
         }
+    }
+
+    private func refreshContexts() async {
+        await productsContext.fetch()
+        await storageContext.fetch()
+        await shoppingListContext.fetchAll(storages: storageContext.storages)
+        await notificationsContext.fetchInvites()
+        await profileContext.refreshCurrentUser(authContext: authContext)
     }
 }
 

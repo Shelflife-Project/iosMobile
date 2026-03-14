@@ -77,9 +77,21 @@ struct RootView: View {
         .task {
             await bootstrap()
         }
+        .onChange(of: authContext.isLoggedIn) { _, isLoggedIn in
+            if !isLoggedIn {
+                clearContexts()
+                hasBootstrappedData = false
+                return
+            }
+
+            hasBootstrappedData = false
+            Task {
+                await bootstrap(force: true)
+            }
+        }
     }
 
-    private func bootstrap() async {
+    private func bootstrap(force: Bool = false) async {
         if authContext.token != nil && !authContext.hasCheckedSession {
             _ = await authContext.me()
         }
@@ -88,7 +100,7 @@ struct RootView: View {
 
         guard authContext.isLoggedIn else { return }
 
-        if hasBootstrappedData { return }
+        if hasBootstrappedData && !force { return }
 
         isBootstrappingData = true
         defer {
@@ -100,5 +112,23 @@ struct RootView: View {
         await storageContext.fetch()
         await shoppingListContext.fetchAll(storages: storageContext.storages)
         await notificationsContext.fetchInvites()
+    }
+
+    private func clearContexts() {
+        storageContext.storages = []
+        storageContext.errorMessage = nil
+
+        productsContext.products = []
+        productsContext.errorMessage = nil
+
+        shoppingListContext.items = []
+        shoppingListContext.errorMessage = nil
+        shoppingListContext.selectedStorageId = nil
+
+        notificationsContext.invites = []
+        notificationsContext.errorMessage = nil
+
+        storageDetailContext.members = []
+        storageDetailContext.errorMessage = nil
     }
 }

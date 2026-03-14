@@ -23,6 +23,19 @@ class StorageDetailContext {
         members.filter { !$0.accepted }
     }
 
+    func refreshStorage(_ storage: Storage) async {
+        guard let storageId = storage.serverId else { return }
+
+        do {
+            let remoteStorage = try await apiService.fetchStorage(id: storageId)
+            storage.name = remoteStorage.name
+            storage.owner = remoteStorage.owner
+            await syncItems(for: storage)
+        } catch {
+            errorMessage = "Failed to refresh storage: \(error.localizedDescription)"
+        }
+    }
+
     func syncItems(for storage: Storage) async {
         guard let storageId = storage.serverId else { return }
 
@@ -73,7 +86,7 @@ class StorageDetailContext {
             )
 
             _ = remoteItem
-            await syncItems(for: storage)
+            await refreshStorage(storage)
         } catch {
             errorMessage = "Failed to add item: \(error.localizedDescription)"
         }

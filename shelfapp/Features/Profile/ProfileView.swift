@@ -5,6 +5,17 @@ struct ProfileView: View {
     @Environment(AuthContext.self) private var authContext
     @State private var viewModel = ProfileViewModel()
 
+    private var usernameText: String {
+        viewModel.displayValue(profileContext.currentUser?.username)
+    }
+
+    private var userPfpURL: URL? {
+        guard let userId = profileContext.currentUser?.serverId else {
+            return nil
+        }
+        return APIService.shared.userPfpURL(userId: userId)
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -12,15 +23,24 @@ struct ProfileView: View {
                     HStack {
                         Text("Username")
                         Spacer()
-                        Text(viewModel.displayValue(profileContext.currentUser?.username))
-                            .foregroundStyle(.secondary)
+                        HStack(spacing: 6) {
+                            if profileContext.currentUser?.admin == true {
+                                Image(systemName: "crown.fill")
+                                    .foregroundStyle(.yellow)
+                            }
+                            Text(usernameText)
+                                .foregroundStyle(.secondary)
+                        }
                     }
 
                     HStack {
-                        Text("Email")
+                        Text("Profile Picture")
                         Spacer()
-                        Text(viewModel.displayValue(profileContext.currentUser?.email))
-                            .foregroundStyle(.secondary)
+                        RemoteImage(
+                            url: userPfpURL,
+                            placeholder: "person.crop.circle",
+                            size: 32
+                        )
                     }
                 }
 
