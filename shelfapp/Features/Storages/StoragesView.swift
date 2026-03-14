@@ -49,14 +49,12 @@ struct StoragesView: View {
                                 NavigationLink(destination: StorageDetailView(storage: storage)) {
                                     StorageListRow(storage: storage, isOwner: true)
                                 }
-                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                     Button(role: .destructive) {
                                         deleteStorage(storage)
                                     } label: {
                                         Label("Delete", systemImage: "trash")
                                     }
-                                }
-                                .swipeActions(edge: .leading, allowsFullSwipe: false) {
                                     if canEditStorage(storage) {
                                         Button {
                                             viewModel.editingStorage = storage
@@ -84,15 +82,13 @@ struct StoragesView: View {
                                 NavigationLink(destination: StorageDetailView(storage: storage)) {
                                     StorageListRow(storage: storage, isOwner: false)
                                 }
-                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                     Button(role: .destructive) {
                                         leaveStorage(storage)
                                     } label: {
                                         Label("Leave", systemImage: "rectangle.portrait.and.arrow.right")
                                     }
                                     .tint(.orange)
-                                }
-                                .swipeActions(edge: .leading, allowsFullSwipe: false) {
                                     if canEditStorage(storage) {
                                         Button {
                                             viewModel.editingStorage = storage
@@ -199,14 +195,8 @@ struct StoragesView: View {
         isAdmin || storage.owner?.username == currentUsername
     }
 
-    private func saveStorageEdits(name: String, runningLowEnabled: Bool, shoppingListEnabled: Bool) {
+    private func saveStorageEdits(name: String) {
         guard let storage = viewModel.editingStorage else { return }
-
-        if let storageId = storage.serverId {
-            UserDefaults.standard.set(runningLowEnabled, forKey: "storage_\(storageId)_runningLowEnabled")
-            UserDefaults.standard.set(shoppingListEnabled, forKey: "storage_\(storageId)_shoppingListEnabled")
-        }
-
         Task {
             await storageContext.updateName(storage, name: name)
         }

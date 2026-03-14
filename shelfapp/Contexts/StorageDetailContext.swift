@@ -43,8 +43,12 @@ class StorageDetailContext {
         defer { isSyncingItems = false }
 
         do {
-            storage.items = try await apiService.fetchStorageItems(storageId: storageId)
-            storage.shoppingItems = try await apiService.fetchShoppingItems(storageId: storageId)
+            async let itemsFetch = apiService.fetchStorageItems(storageId: storageId)
+            async let shoppingFetch = apiService.fetchShoppingItems(storageId: storageId)
+            async let runningLowFetch = apiService.fetchRunningLowSettings(storageId: storageId)
+            storage.items = try await itemsFetch
+            storage.shoppingItems = try await shoppingFetch
+            storage.runningLowSettings = try await runningLowFetch
         } catch {
             errorMessage = "Failed to sync items: \(error.localizedDescription)"
         }
@@ -151,6 +155,66 @@ class StorageDetailContext {
             }
         }
         await syncItems(for: storage)
+    }
+
+    // MARK: - Per-Item Shopping List
+
+    func addToShoppingList(product: Product, to storage: Storage, amount: Int = 1) async {
+        guard let storageId = storage.serverId, let productId = product.serverId else { return }
+        errorMessage = nil
+        do {
+            let newItem = try await apiService.addShoppingItem(storageId: storageId, productId: productId, amountToBuy: amount)
+            storage.shoppingItems.append(newItem)
+        } catch {
+            errorMessage = "Failed to add to shopping list: \(error.localizedDescription)"
+        }
+    }
+
+    func removeFromShoppingList(product: Product, from storage: Storage) async {
+        guard let storageId = storage.serverId else { return }
+        guard let item = storage.shoppingItems.first(where: { $0.product?.serverId == product.serverId }),
+              let itemId = item.serverId else { return }
+        errorMessage = nil
+        do {
+            try await apiService.deleteShoppingItem(storageId: storageId, itemId: itemId)
+            storage.shoppingItems.removeAll { $0.serverId == itemId }
+        } catch {
+            errorMessage = "Failed to remove from shopping list: \(error.localizedDescription)"
+        }
+    }
+
+    // MARK: - Per-Item Running Low
+
+    func setRunningLow(product: Product, in storage: Storage, threshold: Int) async {
+        guard let storageId = storage.serverId, let productId = product.serverId else { return }
+        errorMessage = nil
+        do {
+            if let existing = storage.runningLowSettings.first(where: { $0.productId == productId }),
+               let settingId = existing.serverId {
+                let updated = try await apiService.updateRunningLowSetting(storageId: storageId, settingId: settingId, threshold: threshold)
+                if let idx = storage.runningLowSettings.firstIndex(where: { $0.serverId == settingId }) {
+                    storage.runningLowSettings[idx] = updated
+                }
+            } else {
+                let created = try await apiService.createRunningLowSetting(storageId: storageId, productId: productId, threshold: threshold)
+                storage.runningLowSettings.append(created)
+            }
+        } catch {
+            errorMessage = "Failed to set running low: \(error.localizedDescription)"
+        }
+    }
+
+    func removeRunningLow(product: Product, from storage: Storage) async {
+        guard let storageId = storage.serverId else { return }
+        guard let setting = storage.runningLowSettings.first(where: { $0.productId == product.serverId }),
+              let settingId = setting.serverId else { return }
+        errorMessage = nil
+        do {
+            try await apiService.deleteRunningLowSetting(storageId: storageId, settingId: settingId)
+            storage.runningLowSettings.removeAll { $0.serverId == settingId }
+        } catch {
+            errorMessage = "Failed to remove running low setting: \(error.localizedDescription)"
+        }
     }
 
     private func seedOwnerAsMemberIfNeeded(_ storage: Storage) {

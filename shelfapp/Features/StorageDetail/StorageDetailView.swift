@@ -5,6 +5,8 @@ struct StorageDetailView: View {
     @Environment(ProfileContext.self) private var profileContext
     var storage: Storage
     @State private var viewModel = StorageDetailViewModel()
+    @State private var selectedItemForRunningLow: StorageItem? = nil
+    @State private var showRunningLowSheet = false
 
     private var isOwner: Bool {
         viewModel.isOwner(storage: storage, currentUsername: profileContext.currentUser?.username)
@@ -16,6 +18,39 @@ struct StorageDetailView: View {
                 Section {
                     ForEach(storage.items) { item in
                         ItemRow(item: item)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                // Shopping List action
+                                let inShoppingList = storage.shoppingItems.contains(where: { $0.product?.serverId == item.product?.serverId })
+                                if inShoppingList {
+                                    Button {
+                                        if let product = item.product {
+                                            Task { await storageDetailContext.removeFromShoppingList(product: product, from: storage) }
+                                        }
+                                    } label: {
+                                        Label("Remove", systemImage: "cart.badge.minus")
+                                    }
+                                    .tint(.orange)
+                                } else {
+                                    Button {
+                                        if let product = item.product {
+                                            Task { await storageDetailContext.addToShoppingList(product: product, to: storage) }
+                                        }
+                                    } label: {
+                                        Label("Add to List", systemImage: "cart.badge.plus")
+                                    }
+                                    .tint(.green)
+                                }
+
+                                // Running Low action
+                                Button {
+                                    selectedItemForRunningLow = item
+                                    showRunningLowSheet = true
+                                } label: {
+                                    let hasSetting = storage.runningLowSettings.contains(where: { $0.productId == item.product?.serverId })
+                                    Label(hasSetting ? "Running Low" : "Set Alert", systemImage: hasSetting ? "bell.fill" : "bell")
+                                }
+                                .tint(.indigo)
+                            }
                     }
                     .onDelete { offsets in
                         deleteItems(offsets: offsets)
@@ -164,6 +199,22 @@ struct StorageDetailView: View {
                 ),
                 onInvite: { email in inviteMember(email: email) }
             )
+        }
+        .sheet(isPresented: $showRunningLowSheet, onDismiss: { selectedItemForRunningLow = nil }) {
+            if let item = selectedItemForRunningLow, let product = item.product {
+                let existingSetting = storage.runningLowSettings.first(where: { $0.productId == product.serverId })
+                SetRunningLowSheet(
+                    product: product,
+                    existingSetting: existingSetting,
+                    isPresented: $showRunningLowSheet,
+                    onSave: { threshold in
+                        Task { await storageDetailContext.setRunningLow(product: product, in: storage, threshold: threshold) }
+                    },
+                    onRemove: {
+                        Task { await storageDetailContext.removeRunningLow(product: product, from: storage) }
+                    }
+                )
+            }
         }
         .alert("Error", isPresented: Binding(
             get: { storageDetailContext.errorMessage != nil },

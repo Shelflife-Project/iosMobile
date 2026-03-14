@@ -14,6 +14,7 @@ final class Storage: Identifiable, Hashable {
     var owner: User?
     var items: [StorageItem] = []
     var shoppingItems: [ShoppingListItem] = []
+    var runningLowSettings: [RunningLowSetting] = []
 
     init(name: String, owner: User? = nil, serverId: Int? = nil) {
         self.name = name

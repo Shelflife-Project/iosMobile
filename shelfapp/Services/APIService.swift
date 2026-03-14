@@ -324,6 +324,71 @@ class APIService {
         try validateResponse(response)
     }
 
+    // MARK: - Running Low Settings API
+
+    func fetchRunningLowSettings(storageId: Int) async throws -> [RunningLowSetting] {
+        guard let url = normalizeURL("api/storages/\(storageId)/runninglowsettings") else { throw APIError.invalidURL }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.allHTTPHeaderFields = buildHeaders()
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validateResponse(response)
+
+        let decoder = JSONDecoder()
+        return try decoder.decode([RunningLowSettingDTO].self, from: data).map { $0.toDomain() }
+    }
+
+    func createRunningLowSetting(storageId: Int, productId: Int, threshold: Int) async throws -> RunningLowSetting {
+        guard let url = normalizeURL("api/storages/\(storageId)/runninglowsettings") else { throw APIError.invalidURL }
+
+        let payload: [String: Any] = ["productId": productId, "runningLow": threshold]
+        let jsonData = try JSONSerialization.data(withJSONObject: payload)
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = buildHeaders()
+        request.httpBody = jsonData
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validateResponse(response)
+
+        let decoder = JSONDecoder()
+        let dto = try decoder.decode(RunningLowSettingDTO.self, from: data)
+        return dto.toDomain()
+    }
+
+    func updateRunningLowSetting(storageId: Int, settingId: Int, threshold: Int) async throws -> RunningLowSetting {
+        guard let url = normalizeURL("api/storages/\(storageId)/runninglowsettings/\(settingId)") else { throw APIError.invalidURL }
+
+        let payload: [String: Any] = ["runningLow": threshold]
+        let jsonData = try JSONSerialization.data(withJSONObject: payload)
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.allHTTPHeaderFields = buildHeaders()
+        request.httpBody = jsonData
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validateResponse(response)
+
+        let decoder = JSONDecoder()
+        let dto = try decoder.decode(RunningLowSettingDTO.self, from: data)
+        return dto.toDomain()
+    }
+
+    func deleteRunningLowSetting(storageId: Int, settingId: Int) async throws {
+        guard let url = normalizeURL("api/storages/\(storageId)/runninglowsettings/\(settingId)") else { throw APIError.invalidURL }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.allHTTPHeaderFields = buildHeaders()
+
+        let (_, response) = try await URLSession.shared.data(for: request)
+        try validateResponse(response)
+    }
+
     // MARK: - Storage Members API
 
     func fetchMembers(storageId: Int) async throws -> [StorageMemberInfo] {
@@ -595,5 +660,15 @@ struct ShoppingListItemDTO: Codable {
 
     func toDomain() -> ShoppingListItem {
         ShoppingListItem(storage: storage?.toDomain(), product: product?.toDomain(), amountToBuy: amountToBuy, serverId: id)
+    }
+}
+
+struct RunningLowSettingDTO: Codable {
+    let id: Int
+    let product: ProductDTO
+    let runningLow: Int
+
+    func toDomain() -> RunningLowSetting {
+        RunningLowSetting(productId: product.id, productName: product.name, threshold: runningLow, serverId: id)
     }
 }

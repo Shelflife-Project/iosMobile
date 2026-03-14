@@ -6,7 +6,9 @@ struct ProfileView: View {
     @State private var viewModel = ProfileViewModel()
     @State private var profileImageRefreshToken = UUID().uuidString
     @State private var animateCrown = true
-    @State private var animateLogout = true
+    @State private var animateLogout = false
+    @State private var hasAnimatedLogout = false
+    @State private var showEditAccountSheet = false
 
     private var usernameText: String {
         viewModel.displayValue(profileContext.currentUser?.username)
@@ -28,8 +30,8 @@ struct ProfileView: View {
         NavigationStack {
             Form {
                 Section("Account") {
-                    NavigationLink {
-                        AccountDetailsView(profileImageRefreshToken: $profileImageRefreshToken)
+                    Button {
+                        showEditAccountSheet = true
                     } label: {
                         HStack(spacing: 12) {
                             ZStack(alignment: .bottomTrailing) {
@@ -55,12 +57,13 @@ struct ProfileView: View {
 
                             Spacer()
 
-                            Image(systemName: "chevron.right")
+                            Image(systemName: "pencil")
                                 .font(.caption)
                                 .foregroundStyle(.tertiary)
                         }
                         .frame(height: 48)
                     }
+                    .buttonStyle(.plain)
                 }
 
                 Section("Settings") {
@@ -101,19 +104,30 @@ struct ProfileView: View {
                 }
             }
             .scrollContentBackground(.hidden)
+            .appGradientBackground()
             .navigationTitle("Profile")
             .onAppear {
                 animateCrown = true
-                animateLogout = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    withAnimation(.easeInOut(duration: 0.6)) { animateLogout = false }
+                if !hasAnimatedLogout {
+                    hasAnimatedLogout = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                        animateLogout = true
+                    }
                 }
                 Task {
                     await profileContext.refreshCurrentUser(authContext: authContext)
                 }
             }
+            .sheet(isPresented: $showEditAccountSheet) {
+                if let user = profileContext.currentUser {
+                    EditAccountSheet(
+                        user: user,
+                        isPresented: $showEditAccountSheet,
+                        profileImageRefreshToken: $profileImageRefreshToken
+                    )
+                }
+            }
         }
-        .appGradientBackground()
     }
 
     private func logout() {
