@@ -165,13 +165,14 @@ class APIService {
         return try decoder.decode([ProductDTO].self, from: data).map { $0.toDomain() }
     }
 
-    func createProduct(name: String, category: String, expirationDaysDelta: Int) async throws -> Product {
+    func createProduct(name: String, category: String, expirationDaysDelta: Int, barcode: String?) async throws -> Product {
         guard let url = normalizeURL("api/products") else { throw APIError.invalidURL }
 
         let payload: [String: Any] = [
             "name": name,
             "category": category,
-            "expirationDaysDelta": expirationDaysDelta
+            "expirationDaysDelta": expirationDaysDelta,
+            "barcode": barcode as Any
         ]
         let jsonData = try JSONSerialization.data(withJSONObject: payload)
 
@@ -186,6 +187,41 @@ class APIService {
         let decoder = JSONDecoder()
         let dto = try decoder.decode(ProductDTO.self, from: data)
         return dto.toDomain()
+    }
+
+    func updateProduct(id: Int, name: String, category: String, expirationDaysDelta: Int, barcode: String?) async throws -> Product {
+        guard let url = normalizeURL("api/products/\(id)") else { throw APIError.invalidURL }
+
+        let payload: [String: Any] = [
+            "name": name,
+            "category": category,
+            "expirationDaysDelta": expirationDaysDelta,
+            "barcode": barcode as Any
+        ]
+        let jsonData = try JSONSerialization.data(withJSONObject: payload)
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "PATCH"
+        request.allHTTPHeaderFields = buildHeaders()
+        request.httpBody = jsonData
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validateResponse(response)
+
+        let decoder = JSONDecoder()
+        let dto = try decoder.decode(ProductDTO.self, from: data)
+        return dto.toDomain()
+    }
+
+    func deleteProduct(id: Int) async throws {
+        guard let url = normalizeURL("api/products/\(id)") else { throw APIError.invalidURL }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.allHTTPHeaderFields = buildHeaders()
+
+        let (_, response) = try await URLSession.shared.data(for: request)
+        try validateResponse(response)
     }
 
     // MARK: - Storage Item API
@@ -420,7 +456,7 @@ class APIService {
 
         var body = Data()
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(fileName)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"pfp\"; filename=\"\(fileName)\"\r\n".data(using: .utf8)!)
         body.append("Content-Type: \(mimeType)\r\n\r\n".data(using: .utf8)!)
         body.append(imageData)
         body.append("\r\n".data(using: .utf8)!)
@@ -512,7 +548,7 @@ struct ProductDTO: Codable {
     let barcode: String?
 
     func toDomain() -> Product {
-        Product(name: name, category: category, expirationDaysDelta: expirationDaysDelta, barcode: barcode, serverId: id)
+        Product(name: name, category: category, expirationDaysDelta: expirationDaysDelta, barcode: barcode, ownerId: ownerId, serverId: id)
     }
 }
 

@@ -1,14 +1,26 @@
 import SwiftUI
 
-struct CreateProductSheet: View {
+struct EditProductSheet: View {
+    let product: Product
     @Binding var isPresented: Bool
     var onSave: (String, String, Int, String?) -> Void
-    @State private var name = ""
-    @State private var category = ""
-    @State private var description = ""
-    @State private var barcode = ""
-    @State private var expirationDays = 7
+
+    @State private var name: String
+    @State private var category: String
+    @State private var expirationDays: Int
+    @State private var barcode: String
     @State private var showScanner = false
+
+    init(product: Product, isPresented: Binding<Bool>, onSave: @escaping (String, String, Int, String?) -> Void) {
+        self.product = product
+        self._isPresented = isPresented
+        self.onSave = onSave
+
+        _name = State(initialValue: product.name)
+        _category = State(initialValue: product.category)
+        _expirationDays = State(initialValue: product.expirationDaysDelta)
+        _barcode = State(initialValue: product.barcode ?? "")
+    }
 
     var body: some View {
         NavigationStack {
@@ -16,7 +28,6 @@ struct CreateProductSheet: View {
                 Section("Product Details") {
                     TextField("Product Name", text: $name)
                         .textInputAutocapitalization(.words)
-                    TextField("Product Description", text: $description)
                     TextField("Category", text: $category)
                         .textInputAutocapitalization(.words)
                     HStack(spacing: 8) {
@@ -37,12 +48,12 @@ struct CreateProductSheet: View {
                     Stepper(
                         "Days: \(expirationDays)",
                         value: $expirationDays,
-                        in: 0...365
+                        in: 1...365
                     )
                 }
             }
             .scrollContentBackground(.hidden)
-            .navigationTitle("Create Product")
+            .navigationTitle("Edit Product")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -50,13 +61,14 @@ struct CreateProductSheet: View {
                         isPresented = false
                     }
                 }
+
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
                         let trimmedBarcode = barcode.trimmingCharacters(in: .whitespacesAndNewlines)
                         onSave(name, category, expirationDays, trimmedBarcode.isEmpty ? nil : trimmedBarcode)
                         isPresented = false
                     }
-                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || category.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || category.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
             .sheet(isPresented: $showScanner) {

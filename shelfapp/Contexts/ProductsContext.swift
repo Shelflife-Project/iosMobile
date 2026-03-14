@@ -28,7 +28,7 @@ class ProductsContext {
         }
     }
 
-    func addNew(name: String, category: String, expirationDaysDelta: Int) async {
+    func addNew(name: String, category: String, expirationDaysDelta: Int, barcode: String?) async {
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
@@ -37,7 +37,8 @@ class ProductsContext {
             _ = try await apiService.createProduct(
                 name: name,
                 category: category,
-                expirationDaysDelta: expirationDaysDelta
+                expirationDaysDelta: expirationDaysDelta,
+                barcode: barcode
             )
             await fetch()
         } catch {
@@ -45,7 +46,42 @@ class ProductsContext {
         }
     }
 
-    func add(name: String, category: String, expirationDaysDelta: Int, context: Any? = nil) async {
-        await addNew(name: name, category: category, expirationDaysDelta: expirationDaysDelta)
+    func update(product: Product, name: String, category: String, expirationDaysDelta: Int, barcode: String?) async {
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        do {
+            guard let productId = product.serverId else { throw APIError.invalidURL }
+            _ = try await apiService.updateProduct(
+                id: productId,
+                name: name,
+                category: category,
+                expirationDaysDelta: expirationDaysDelta,
+                barcode: barcode
+            )
+            await fetch()
+        } catch {
+            errorMessage = "Failed to update product: \(error.localizedDescription)"
+        }
+    }
+
+    func delete(_ product: Product) async {
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        do {
+            guard let productId = product.serverId else { throw APIError.invalidURL }
+            try await apiService.deleteProduct(id: productId)
+            products.removeAll { $0.id == product.id }
+            await fetch()
+        } catch {
+            errorMessage = "Failed to delete product: \(error.localizedDescription)"
+        }
+    }
+
+    func add(name: String, category: String, expirationDaysDelta: Int, barcode: String? = nil, context: Any? = nil) async {
+        await addNew(name: name, category: category, expirationDaysDelta: expirationDaysDelta, barcode: barcode)
     }
 }

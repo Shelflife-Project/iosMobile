@@ -2,7 +2,10 @@ import SwiftUI
 
 struct ProductsView: View {
     @Environment(ProductsContext.self) private var productsContext
+    @Environment(ProfileContext.self) private var profileContext
     @State private var viewModel = ProductsViewModel()
+    @State private var showEditForm = false
+    @State private var editingProduct: Product?
 
     var filteredProducts: [Product] {
         viewModel.filteredProducts(from: productsContext.products)
@@ -10,6 +13,20 @@ struct ProductsView: View {
 
     var categories: [String] {
         viewModel.categories(from: productsContext.products)
+    }
+
+    private var currentUserId: Int? {
+        profileContext.currentUser?.serverId
+    }
+
+    private var ownProducts: [Product] {
+        guard let currentUserId else { return [] }
+        return filteredProducts.filter { $0.ownerId == currentUserId }
+    }
+
+    private var globalProducts: [Product] {
+        guard let currentUserId else { return filteredProducts }
+        return filteredProducts.filter { $0.ownerId != currentUserId }
     }
 
     var body: some View {
@@ -50,10 +67,38 @@ struct ProductsView: View {
                             .listRowInsets(EdgeInsets())
                         }
 
-                        ForEach(filteredProducts) { product in
-                            ProductListRow(product: product)
+                        if !ownProducts.isEmpty {
+                            Section("Own products") {
+                                ForEach(ownProducts) { product in
+                                    ProductListRow(product: product)
+                                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                            Button(role: .destructive) {
+                                                deleteProduct(product)
+                                            } label: {
+                                                Label("Delete", systemImage: "trash")
+                                            }
+
+                                            Button {
+                                                editingProduct = product
+                                                showEditForm = true
+                                            } label: {
+                                                Label("Edit", systemImage: "pencil")
+                                            }
+                                            .tint(.blue)
+                                        }
+                                }
+                            }
+                        }
+
+                        if !globalProducts.isEmpty {
+                            Section("Global products") {
+                                ForEach(globalProducts) { product in
+                                    ProductListRow(product: product)
+                                }
+                            }
                         }
                     }
+                    .scrollContentBackground(.hidden)
                 }
             }
             .searchable(text: Binding(
@@ -80,6 +125,15 @@ struct ProductsView: View {
                     onSave: createProduct
                 )
             }
+            .sheet(isPresented: $showEditForm) {
+                if let product = editingProduct {
+                    EditProductSheet(
+                        product: product,
+                        isPresented: $showEditForm,
+                        onSave: saveProductEdits
+                    )
+                }
+            }
             .alert("Error", isPresented: Binding(
                 get: { productsContext.errorMessage != nil },
                 set: { isPresented in
@@ -98,15 +152,37 @@ struct ProductsView: View {
                 }
             }
         }
+        .appGradientBackground()
     }
 
-    private func createProduct(name: String, category: String, expirationDays: Int) {
+    private func createProduct(name: String, category: String, expirationDays: Int, barcode: String?) {
         Task {
             await productsContext.add(
                 name: name,
                 category: category,
-                expirationDaysDelta: expirationDays
+                expirationDaysDelta: expirationDays,
+                barcode: barcode
             )
+        }
+    }
+
+    private func saveProductEdits(name: String, category: String, expirationDays: Int, barcode: String?) {
+        guard let product = editingProduct else { return }
+
+        Task {
+            await productsContext.update(
+                product: product,
+                name: name,
+                category: category,
+                expirationDaysDelta: expirationDays,
+                barcode: barcode
+            )
+        }
+    }
+
+    private func deleteProduct(_ product: Product) {
+        Task {
+            await productsContext.delete(product)
         }
     }
 }
