@@ -14,8 +14,10 @@ struct AppSettingsView: View {
                 Toggle("Dark Mode", isOn: $darkModeEnabled)
             }
         }
+        .scrollContentBackground(.hidden)
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
+        .appGradientBackground()
     }
 }
 

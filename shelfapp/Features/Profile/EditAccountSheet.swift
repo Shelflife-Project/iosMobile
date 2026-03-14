@@ -7,18 +7,32 @@ struct EditAccountSheet: View {
 
     let user: User
     @Binding var isPresented: Bool
-    let onSaved: () -> Void
+    @Binding var profileImageRefreshToken: String
+    var onSaved: (() -> Void)? = nil
 
     @State private var username: String
     @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var selectedImageData: Data?
     @State private var isSaving = false
 
-    init(user: User, isPresented: Binding<Bool>, onSaved: @escaping () -> Void) {
+    init(user: User, isPresented: Binding<Bool>, profileImageRefreshToken: Binding<String>, onSaved: (() -> Void)? = nil) {
         self.user = user
         self._isPresented = isPresented
+        self._profileImageRefreshToken = profileImageRefreshToken
         self.onSaved = onSaved
         _username = State(initialValue: user.username)
+    }
+
+    private var userPfpURL: URL? {
+        guard let userId = user.serverId else {
+            return nil
+        }
+        guard let baseURL = APIService.shared.userPfpURL(userId: userId) else {
+            return nil
+        }
+        var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)
+        components?.queryItems = [URLQueryItem(name: "v", value: profileImageRefreshToken)]
+        return components?.url
     }
 
     var body: some View {
@@ -34,11 +48,20 @@ struct EditAccountSheet: View {
                     HStack {
                         Text("Current")
                         Spacer()
-                        RemoteImage(
-                            url: APIService.shared.userPfpURL(userId: user.serverId ?? 0),
-                            placeholder: "person.crop.circle",
-                            size: 44
-                        )
+                        if let selectedImageData,
+                           let selectedImage = UIImage(data: selectedImageData) {
+                            Image(uiImage: selectedImage)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 44, height: 44)
+                                .clipShape(RoundedRectangle(cornerRadius: 11))
+                        } else {
+                            RemoteImage(
+                                url: userPfpURL,
+                                placeholder: "person.crop.circle",
+                                size: 44
+                            )
+                        }
                     }
 
                     PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
@@ -52,6 +75,7 @@ struct EditAccountSheet: View {
                     }
                 }
             }
+            .scrollContentBackground(.hidden)
             .navigationTitle("Edit Account")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -88,6 +112,7 @@ struct EditAccountSheet: View {
                 Text(profileContext.errorMessage ?? "An unknown error occurred")
             }
         }
+        .appGradientBackground()
     }
 
     private var isSaveDisabled: Bool {
@@ -126,7 +151,8 @@ struct EditAccountSheet: View {
         )
 
         if didSave {
-            onSaved()
+            profileImageRefreshToken = UUID().uuidString
+            onSaved?()
             isPresented = false
         }
     }

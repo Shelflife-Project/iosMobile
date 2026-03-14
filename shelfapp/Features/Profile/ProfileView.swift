@@ -4,8 +4,9 @@ struct ProfileView: View {
     @Environment(ProfileContext.self) private var profileContext
     @Environment(AuthContext.self) private var authContext
     @State private var viewModel = ProfileViewModel()
-    @State private var showEditSheet = false
     @State private var profileImageRefreshToken = UUID().uuidString
+    @State private var animateCrown = true
+    @State private var animateLogout = true
 
     private var usernameText: String {
         viewModel.displayValue(profileContext.currentUser?.username)
@@ -27,33 +28,38 @@ struct ProfileView: View {
         NavigationStack {
             Form {
                 Section("Account") {
-                    HStack {
-                        Text("Username")
-                        Spacer()
-                        HStack(spacing: 6) {
-                            if profileContext.currentUser?.admin == true {
-                                Image(systemName: "crown.fill")
-                                    .foregroundStyle(.yellow)
-                            }
-                            Text(usernameText)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    HStack {
-                        Text("Profile Picture")
-                        Spacer()
-                        RemoteImage(
-                            url: userPfpURL,
-                            placeholder: "person.crop.circle",
-                            size: 32
-                        )
-                    }
-
-                    Button {
-                        showEditSheet = true
+                    NavigationLink {
+                        AccountDetailsView(profileImageRefreshToken: $profileImageRefreshToken)
                     } label: {
-                        Label("Edit Account", systemImage: "pencil")
+                        HStack(spacing: 12) {
+                            ZStack(alignment: .bottomTrailing) {
+                                RemoteImage(
+                                    url: userPfpURL,
+                                    placeholder: "person.crop.circle",
+                                    size: 36
+                                )
+
+                                if profileContext.currentUser?.admin == true {
+                                    Image(systemName: "crown.fill")
+                                        .font(.system(size: 11))
+                                        .foregroundStyle(.yellow)
+                                        .padding(3)
+                                        .background(Circle().fill(Color(.systemBackground)))
+                                        .offset(x: 5, y: 5)
+                                        .symbolEffect(.bounce, options: .repeating, value: animateCrown)
+                                }
+                            }
+
+                            Text(usernameText)
+                                .foregroundStyle(.primary)
+
+                            Spacer()
+
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
+                        .frame(height: 48)
                     }
                 }
 
@@ -88,25 +94,26 @@ struct ProfileView: View {
                     } label: {
                         HStack {
                             Image(systemName: "arrow.right.circle")
+                                .symbolEffect(.drawOn, isActive: animateLogout)
                             Text("Logout")
                         }
                     }
                 }
             }
+            .scrollContentBackground(.hidden)
             .navigationTitle("Profile")
             .onAppear {
+                animateCrown = true
+                animateLogout = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    withAnimation(.easeInOut(duration: 0.6)) { animateLogout = false }
+                }
                 Task {
                     await profileContext.refreshCurrentUser(authContext: authContext)
                 }
             }
-            .sheet(isPresented: $showEditSheet) {
-                if let user = profileContext.currentUser {
-                    EditAccountSheet(user: user, isPresented: $showEditSheet) {
-                        profileImageRefreshToken = UUID().uuidString
-                    }
-                }
-            }
         }
+        .appGradientBackground()
     }
 
     private func logout() {
