@@ -63,22 +63,13 @@ struct SignupFormView: View {
             }
             Spacer()
 
-            Button(action: signup) {
-                if authContext.isLoading {
-                    ProgressView()
-                        .tint(.white)
-                } else {
-                    Text("Sign Up")
-                        .fontWeight(.semibold)
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .padding()
-            .background(color)
-            .foregroundStyle(.white)
-            .cornerRadius(8)
-            .disabled(authContext.isLoading || username.isEmpty || email.isEmpty || password.isEmpty || passwordRepeat.isEmpty)
-            .shadow(radius: 4, x: 3, y: 3)
+            AuthActionButton(
+                title: "Sign Up",
+                color: color,
+                isLoading: authContext.isLoading,
+                isDisabled: authContext.isLoading || username.isEmpty || email.isEmpty || password.isEmpty || passwordRepeat.isEmpty,
+                action: signup
+            )
         }
     }
 

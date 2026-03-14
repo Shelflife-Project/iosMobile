@@ -3,6 +3,7 @@ import SwiftUI
 struct LoginView: View {
     @Environment(\.colorScheme) var colorScheme
     @State private var viewModel = LoginViewModel()
+    @State private var animateLogo = false
 
     private var color: Color {
         colorScheme == .dark ? Color(.indigo) : Color(.cyan)
@@ -14,6 +15,7 @@ struct LoginView: View {
                     Image(systemName: "cube.box.fill")
                         .font(.system(size: 48))
                         .foregroundStyle(color)
+                        .symbolEffect(.bounce, options: .repeating, value: animateLogo)
 
                     Text("Shelf Life")
                         .font(.system(size: 32, weight: .bold))
@@ -47,6 +49,12 @@ struct LoginView: View {
             }
             .padding()
             .appGradientBackground()
+            .onAppear {
+                animateLogo = true
+            }
+            .onDisappear {
+                animateLogo = false
+            }
     }
 
     private var selectedTab: Binding<LoginViewModel.AuthTab> {

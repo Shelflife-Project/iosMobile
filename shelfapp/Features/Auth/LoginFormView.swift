@@ -42,22 +42,13 @@ struct LoginFormView: View {
             }
 
             Spacer()
-            Button(action: login) {
-                if authContext.isLoading {
-                    ProgressView()
-                        .tint(.white)
-                } else {
-                    Text("Login")
-                        .fontWeight(.semibold)
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .padding()
-            .background(color)
-            .foregroundStyle(.white)
-            .cornerRadius(8)
-            .disabled(authContext.isLoading || email.isEmpty || password.isEmpty)
-            .shadow(radius: 4, x: 3, y: 3)
+            AuthActionButton(
+                title: "Login",
+                color: color,
+                isLoading: authContext.isLoading,
+                isDisabled: authContext.isLoading || email.isEmpty || password.isEmpty,
+                action: login
+            )
         }
     }
 
