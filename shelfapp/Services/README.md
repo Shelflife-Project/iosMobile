@@ -10,6 +10,7 @@ The `APIService` provides direct HTTP communication with the Shelf Life backend 
 import SwiftUI
 import SwiftData
 
+
 @main
 struct shelfappApp: App {
     var body: some Scene {
