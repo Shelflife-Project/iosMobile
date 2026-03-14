@@ -31,6 +31,7 @@ struct StorageDetailView: View {
                                             Task {
                                                 await storageDetailContext.removeFromShoppingList(product: product, from: storage)
                                                 await refreshSharedContexts()
+                                                viewModel.refreshContent()
                                             }
                                         }
                                     } label: {
@@ -43,6 +44,7 @@ struct StorageDetailView: View {
                                             Task {
                                                 await storageDetailContext.addToShoppingList(product: product, to: storage)
                                                 await refreshSharedContexts()
+                                                viewModel.refreshContent()
                                             }
                                         }
                                     } label: {
@@ -88,6 +90,7 @@ struct StorageDetailView: View {
                                         amountToBuy: item.amountToBuy + 1
                                     )
                                     await refreshSharedContexts()
+                                    viewModel.refreshContent()
                                 }
                             },
                             onDecrement: {
@@ -99,12 +102,14 @@ struct StorageDetailView: View {
                                         amountToBuy: item.amountToBuy - 1
                                     )
                                     await refreshSharedContexts()
+                                    viewModel.refreshContent()
                                 }
                             },
                             onComplete: {
                                 Task {
                                     await storageDetailContext.completeShoppingItem(item, in: storage)
                                     await refreshSharedContexts()
+                                    viewModel.refreshContent()
                                 }
                             }
                         )
@@ -310,6 +315,7 @@ struct StorageDetailView: View {
         Task {
             await storageDetailContext.deleteItem(item, from: storage)
             await refreshSharedContexts()
+            viewModel.refreshContent()
         }
     }
 
@@ -317,6 +323,7 @@ struct StorageDetailView: View {
         Task {
             await storageDetailContext.deleteShoppingItems(at: offsets, from: storage)
             await refreshSharedContexts()
+            viewModel.refreshContent()
         }
     }
 
