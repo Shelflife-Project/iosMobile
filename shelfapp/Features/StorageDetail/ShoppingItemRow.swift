@@ -4,7 +4,7 @@ struct ShoppingItemRow: View {
     var item: ShoppingListItem
     var onIncrement: (() -> Void)? = nil
     var onDecrement: (() -> Void)? = nil
-    var onDelete: (() -> Void)? = nil
+    var onComplete: (() -> Void)? = nil
 
     private var canDecrement: Bool {
         item.amountToBuy > 1
@@ -36,10 +36,10 @@ struct ShoppingItemRow: View {
                     .buttonStyle(.plain)
                 }
 
-                if let onDelete {
-                    Button(action: onDelete) {
-                        Image(systemName: "trash.fill")
-                            .foregroundStyle(.red)
+                if let onComplete {
+                    Button(action: onComplete) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
                     }
                     .buttonStyle(.plain)
                 }

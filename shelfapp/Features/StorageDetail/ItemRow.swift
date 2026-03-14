@@ -45,9 +45,9 @@ struct ItemRow: View {
                     }
                 }
 
-                if let onDelete {
+                if isExpired, let onDelete {
                     Button(role: .destructive, action: onDelete) {
-                        Label("Delete", systemImage: "trash")
+                        Image(systemName: "trash.fill")
                             .font(.caption)
                     }
                     .buttonStyle(.plain)

@@ -213,6 +213,24 @@ class StorageDetailContext {
         }
     }
 
+    func completeShoppingItem(_ item: ShoppingListItem, in storage: Storage) async {
+        guard let storageId = storage.serverId,
+              let itemId = item.serverId,
+              let productId = item.product?.serverId else { return }
+        errorMessage = nil
+
+        do {
+            let amount = max(1, item.amountToBuy)
+            for _ in 0..<amount {
+                _ = try await apiService.addStorageItem(storageId: storageId, productId: productId, expiresAt: nil)
+            }
+            try await apiService.deleteShoppingItem(storageId: storageId, itemId: itemId)
+            await syncItems(for: storage)
+        } catch {
+            errorMessage = "Failed to complete shopping item: \(error.localizedDescription)"
+        }
+    }
+
     // MARK: - Per-Item Running Low
 
     func setRunningLow(product: Product, in storage: Storage, threshold: Int) async {

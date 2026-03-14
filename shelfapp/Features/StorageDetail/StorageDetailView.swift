@@ -2,6 +2,8 @@ import SwiftUI
 
 struct StorageDetailView: View {
     @Environment(StorageDetailContext.self) private var storageDetailContext
+    @Environment(StorageContext.self) private var storageContext
+    @Environment(ShoppingListContext.self) private var shoppingListContext
     @Environment(ProfileContext.self) private var profileContext
     var storage: Storage
     @State private var viewModel = StorageDetailViewModel()
@@ -26,7 +28,10 @@ struct StorageDetailView: View {
                                 if inShoppingList {
                                     Button {
                                         if let product = item.product {
-                                            Task { await storageDetailContext.removeFromShoppingList(product: product, from: storage) }
+                                            Task {
+                                                await storageDetailContext.removeFromShoppingList(product: product, from: storage)
+                                                await refreshSharedContexts()
+                                            }
                                         }
                                     } label: {
                                         Label("Remove", systemImage: "cart.badge.minus")
@@ -35,7 +40,10 @@ struct StorageDetailView: View {
                                 } else {
                                     Button {
                                         if let product = item.product {
-                                            Task { await storageDetailContext.addToShoppingList(product: product, to: storage) }
+                                            Task {
+                                                await storageDetailContext.addToShoppingList(product: product, to: storage)
+                                                await refreshSharedContexts()
+                                            }
                                         }
                                     } label: {
                                         Label("Add to List", systemImage: "cart.badge.plus")
@@ -79,6 +87,7 @@ struct StorageDetailView: View {
                                         in: storage,
                                         amountToBuy: item.amountToBuy + 1
                                     )
+                                    await refreshSharedContexts()
                                 }
                             },
                             onDecrement: {
@@ -89,11 +98,13 @@ struct StorageDetailView: View {
                                         in: storage,
                                         amountToBuy: item.amountToBuy - 1
                                     )
+                                    await refreshSharedContexts()
                                 }
                             },
-                            onDelete: {
-                                if let product = item.product {
-                                    Task { await storageDetailContext.removeFromShoppingList(product: product, from: storage) }
+                            onComplete: {
+                                Task {
+                                    await storageDetailContext.completeShoppingItem(item, in: storage)
+                                    await refreshSharedContexts()
                                 }
                             }
                         )
@@ -298,13 +309,20 @@ struct StorageDetailView: View {
     private func deleteItem(_ item: StorageItem) {
         Task {
             await storageDetailContext.deleteItem(item, from: storage)
+            await refreshSharedContexts()
         }
     }
 
     private func deleteShoppingItems(offsets: IndexSet) {
         Task {
             await storageDetailContext.deleteShoppingItems(at: offsets, from: storage)
+            await refreshSharedContexts()
         }
+    }
+
+    private func refreshSharedContexts() async {
+        await storageContext.fetch()
+        shoppingListContext.sync(from: storageContext.storages)
     }
 }
 
