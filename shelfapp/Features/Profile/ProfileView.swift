@@ -58,7 +58,7 @@ struct ProfileView: View {
                             Spacer()
 
                             Image(systemName: "pencil")
-                                .font(.caption)
+                                .font(.title3)
                                 .foregroundStyle(.tertiary)
                         }
                         .frame(height: 48)
