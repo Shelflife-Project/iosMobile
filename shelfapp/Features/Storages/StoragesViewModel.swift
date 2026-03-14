@@ -5,6 +5,8 @@ import Observation
 @Observable
 final class StoragesViewModel {
     var showCreateForm = false
+    var showEditForm = false
+    var editingStorage: Storage?
     var animateBox = true
     var animateShared = true
 

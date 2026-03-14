@@ -3,6 +3,7 @@ import SwiftUI
 struct AddItemSheet: View {
     var storage: Storage
     @Binding var isPresented: Bool
+    var onAdded: (() -> Void)? = nil
     @Environment(ProductsContext.self) private var productsContext
     @Environment(StorageDetailContext.self) private var storageDetailContext
     @State private var selectedProduct: Product?
@@ -35,6 +36,7 @@ struct AddItemSheet: View {
                     }
                 }
             }
+            .scrollContentBackground(.hidden)
             .navigationTitle("Add Item")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -45,9 +47,12 @@ struct AddItemSheet: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Add") {
-                        if let product = selectedProduct {
-                            addItem(product: product)
-                            isPresented = false
+                        Task {
+                            if let product = selectedProduct {
+                                await addItem(product: product)
+                                onAdded?()
+                                isPresented = false
+                            }
                         }
                     }
                     .disabled(selectedProduct == nil)
@@ -59,15 +64,14 @@ struct AddItemSheet: View {
                 }
             }
         }
+        .appGradientBackground()
     }
 
-    private func addItem(product: Product) {
-        Task {
-            await storageDetailContext.addItem(
-                to: storage,
-                product: product,
-                expiresAt: expirationDate
-            )
-        }
+    private func addItem(product: Product) async {
+        await storageDetailContext.addItem(
+            to: storage,
+            product: product,
+            expiresAt: expirationDate
+        )
     }
 }

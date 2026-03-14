@@ -21,6 +21,7 @@ struct InviteMemberSheet: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            .scrollContentBackground(.hidden)
             .navigationTitle("Invite Member")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -36,5 +37,6 @@ struct InviteMemberSheet: View {
                 }
             }
         }
+        .appGradientBackground()
     }
 }

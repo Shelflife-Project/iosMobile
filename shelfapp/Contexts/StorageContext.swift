@@ -61,6 +61,20 @@ class StorageContext {
         await addNew(name: name, currentUser: currentUser)
     }
 
+    func updateName(_ storage: Storage, name: String) async {
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        do {
+            guard let storageId = storage.serverId else { throw APIError.invalidURL }
+            _ = try await apiService.updateStorageName(id: storageId, name: name)
+            await fetch()
+        } catch {
+            errorMessage = "Failed to update storage: \(error.localizedDescription)"
+        }
+    }
+
     func remove(_ storage: Storage) async {
         isLoading = true
         errorMessage = nil

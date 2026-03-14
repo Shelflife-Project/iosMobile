@@ -13,6 +13,7 @@ struct CreateStorageSheet: View {
                         .textInputAutocapitalization(.words)
                 }
             }
+            .scrollContentBackground(.hidden)
             .navigationTitle("Create Storage")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -30,5 +31,6 @@ struct CreateStorageSheet: View {
                 }
             }
         }
+        .appGradientBackground()
     }
 }

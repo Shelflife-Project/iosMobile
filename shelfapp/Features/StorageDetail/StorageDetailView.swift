@@ -112,6 +112,7 @@ struct StorageDetailView: View {
                 .padding()
             }
         }
+        .id(viewModel.contentRefreshID)
         .scrollContentBackground(.hidden)
         .appGradientBackground()
         .navigationTitle(storage.name)
@@ -146,7 +147,10 @@ struct StorageDetailView: View {
                 isPresented: Binding(
                     get: { viewModel.showAddItem },
                     set: { viewModel.showAddItem = $0 }
-                )
+                ),
+                onAdded: {
+                    viewModel.refreshContent()
+                }
             )
         }
         .sheet(isPresented: Binding(

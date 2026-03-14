@@ -7,6 +7,7 @@ final class StorageDetailViewModel {
     var showAddItem = false
     var showInviteSheet = false
     var animateItems = true
+    var contentRefreshID = UUID()
 
     func triggerAnimations() {
         animateItems = true
@@ -17,5 +18,9 @@ final class StorageDetailViewModel {
 
     func isOwner(storage: Storage, currentUsername: String?) -> Bool {
         storage.owner?.username == currentUsername
+    }
+
+    func refreshContent() {
+        contentRefreshID = UUID()
     }
 }

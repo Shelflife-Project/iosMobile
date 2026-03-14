@@ -9,6 +9,10 @@ struct StoragesView: View {
         profileContext.currentUser?.username
     }
 
+    private var isAdmin: Bool {
+        profileContext.currentUser?.admin == true
+    }
+
     private var ownedStorages: [Storage] {
         viewModel.ownedStorages(from: storageContext.storages, currentUsername: currentUsername)
     }
@@ -52,6 +56,17 @@ struct StoragesView: View {
                                         Label("Delete", systemImage: "trash")
                                     }
                                 }
+                                .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                                    if canEditStorage(storage) {
+                                        Button {
+                                            viewModel.editingStorage = storage
+                                            viewModel.showEditForm = true
+                                        } label: {
+                                            Label("Edit", systemImage: "pencil")
+                                        }
+                                        .tint(.blue)
+                                    }
+                                }
                             }
                         } header: {
                             HStack(spacing: 6) {
@@ -76,6 +91,17 @@ struct StoragesView: View {
                                         Label("Leave", systemImage: "rectangle.portrait.and.arrow.right")
                                     }
                                     .tint(.orange)
+                                }
+                                .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                                    if canEditStorage(storage) {
+                                        Button {
+                                            viewModel.editingStorage = storage
+                                            viewModel.showEditForm = true
+                                        } label: {
+                                            Label("Edit", systemImage: "pencil")
+                                        }
+                                        .tint(.blue)
+                                    }
                                 }
                             }
                         } header: {
@@ -112,6 +138,21 @@ struct StoragesView: View {
                 ),
                 onSave: createStorage
             )
+        }
+        .sheet(isPresented: Binding(
+            get: { viewModel.showEditForm },
+            set: { viewModel.showEditForm = $0 }
+        )) {
+            if let storage = viewModel.editingStorage {
+                EditStorageSheet(
+                    storage: storage,
+                    isPresented: Binding(
+                        get: { viewModel.showEditForm },
+                        set: { viewModel.showEditForm = $0 }
+                    ),
+                    onSave: saveStorageEdits
+                )
+            }
         }
         .alert("Error", isPresented: Binding(
             get: { storageContext.errorMessage != nil },
@@ -151,6 +192,23 @@ struct StoragesView: View {
     private func leaveStorage(_ storage: Storage) {
         Task {
             await storageContext.leave(storage)
+        }
+    }
+
+    private func canEditStorage(_ storage: Storage) -> Bool {
+        isAdmin || storage.owner?.username == currentUsername
+    }
+
+    private func saveStorageEdits(name: String, runningLowEnabled: Bool, shoppingListEnabled: Bool) {
+        guard let storage = viewModel.editingStorage else { return }
+
+        if let storageId = storage.serverId {
+            UserDefaults.standard.set(runningLowEnabled, forKey: "storage_\(storageId)_runningLowEnabled")
+            UserDefaults.standard.set(shoppingListEnabled, forKey: "storage_\(storageId)_shoppingListEnabled")
+        }
+
+        Task {
+            await storageContext.updateName(storage, name: name)
         }
     }
 }
