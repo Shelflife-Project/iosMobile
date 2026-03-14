@@ -17,7 +17,9 @@ struct StorageDetailView: View {
             if !storage.items.isEmpty {
                 Section {
                     ForEach(storage.items) { item in
-                        ItemRow(item: item)
+                        ItemRow(item: item) {
+                            deleteItem(item)
+                        }
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                 // Shopping List action
                                 let inShoppingList = storage.shoppingItems.contains(where: { $0.product?.serverId == item.product?.serverId })
@@ -68,7 +70,33 @@ struct StorageDetailView: View {
             if !storage.shoppingItems.isEmpty {
                 Section {
                     ForEach(storage.shoppingItems) { item in
-                        ShoppingItemRow(item: item)
+                        ShoppingItemRow(
+                            item: item,
+                            onIncrement: {
+                                Task {
+                                    await storageDetailContext.updateShoppingListAmount(
+                                        item: item,
+                                        in: storage,
+                                        amountToBuy: item.amountToBuy + 1
+                                    )
+                                }
+                            },
+                            onDecrement: {
+                                guard item.amountToBuy > 1 else { return }
+                                Task {
+                                    await storageDetailContext.updateShoppingListAmount(
+                                        item: item,
+                                        in: storage,
+                                        amountToBuy: item.amountToBuy - 1
+                                    )
+                                }
+                            },
+                            onDelete: {
+                                if let product = item.product {
+                                    Task { await storageDetailContext.removeFromShoppingList(product: product, from: storage) }
+                                }
+                            }
+                        )
                     }
                     .onDelete { offsets in
                         deleteShoppingItems(offsets: offsets)
@@ -154,9 +182,7 @@ struct StorageDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                if !storage.items.isEmpty {
-                    EditButton()
-                }
+                EditButton()
             }
             ToolbarItem(placement: .primaryAction) {
                 Menu {
@@ -266,6 +292,12 @@ struct StorageDetailView: View {
     private func deleteItems(offsets: IndexSet) {
         Task {
             await storageDetailContext.deleteItems(at: offsets, from: storage)
+        }
+    }
+
+    private func deleteItem(_ item: StorageItem) {
+        Task {
+            await storageDetailContext.deleteItem(item, from: storage)
         }
     }
 

@@ -143,6 +143,17 @@ class StorageDetailContext {
         await syncItems(for: storage)
     }
 
+    func deleteItem(_ item: StorageItem, from storage: Storage) async {
+        do {
+            if let storageId = storage.serverId, let itemId = item.serverId {
+                try await apiService.deleteStorageItem(storageId: storageId, itemId: itemId)
+            }
+            await syncItems(for: storage)
+        } catch {
+            errorMessage = "Failed to delete item: \(error.localizedDescription)"
+        }
+    }
+
     func deleteShoppingItems(at offsets: IndexSet, from storage: Storage) async {
         for index in offsets.sorted(by: >) {
             let item = storage.shoppingItems[index]
@@ -163,8 +174,16 @@ class StorageDetailContext {
         guard let storageId = storage.serverId, let productId = product.serverId else { return }
         errorMessage = nil
         do {
-            let newItem = try await apiService.addShoppingItem(storageId: storageId, productId: productId, amountToBuy: amount)
-            storage.shoppingItems.append(newItem)
+            _ = try await apiService.addShoppingItem(storageId: storageId, productId: productId, amountToBuy: amount)
+            await syncItems(for: storage)
+
+            if pushNotificationsEnabled {
+                await LocalNotificationService.shared.requestAuthorizationIfNeeded()
+                await LocalNotificationService.shared.postShoppingListAddedNotification(
+                    productName: product.name,
+                    storageName: storage.name
+                )
+            }
         } catch {
             errorMessage = "Failed to add to shopping list: \(error.localizedDescription)"
         }
@@ -177,9 +196,20 @@ class StorageDetailContext {
         errorMessage = nil
         do {
             try await apiService.deleteShoppingItem(storageId: storageId, itemId: itemId)
-            storage.shoppingItems.removeAll { $0.serverId == itemId }
+            await syncItems(for: storage)
         } catch {
             errorMessage = "Failed to remove from shopping list: \(error.localizedDescription)"
+        }
+    }
+
+    func updateShoppingListAmount(item: ShoppingListItem, in storage: Storage, amountToBuy: Int) async {
+        guard let storageId = storage.serverId, let itemId = item.serverId else { return }
+        errorMessage = nil
+        do {
+            _ = try await apiService.updateShoppingItemAmount(storageId: storageId, itemId: itemId, amountToBuy: amountToBuy)
+            await syncItems(for: storage)
+        } catch {
+            errorMessage = "Failed to update shopping item amount: \(error.localizedDescription)"
         }
     }
 
@@ -226,5 +256,12 @@ class StorageDetailContext {
                 at: 0
             )
         }
+    }
+
+    private var pushNotificationsEnabled: Bool {
+        if UserDefaults.standard.object(forKey: "pushNotificationsEnabled") == nil {
+            return true
+        }
+        return UserDefaults.standard.bool(forKey: "pushNotificationsEnabled")
     }
 }

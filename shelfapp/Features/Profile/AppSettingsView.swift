@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct AppSettingsView: View {
-    @State private var notificationsEnabled = true
+    @AppStorage("pushNotificationsEnabled") private var notificationsEnabled = true
     @AppStorage("darkModeEnabled") private var darkModeEnabled = false
 
     var body: some View {
@@ -18,6 +18,13 @@ struct AppSettingsView: View {
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
         .appGradientBackground()
+        .onChange(of: notificationsEnabled) { _, isEnabled in
+            if isEnabled {
+                Task {
+                    await LocalNotificationService.shared.requestAuthorizationIfNeeded()
+                }
+            }
+        }
     }
 }
 

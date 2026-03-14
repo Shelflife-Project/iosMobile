@@ -2,6 +2,14 @@ import SwiftUI
 
 struct ItemRow: View {
     var item: StorageItem
+    var onDelete: (() -> Void)? = nil
+
+    private var isExpired: Bool {
+        guard let expiresAt = item.expiresAt else { return false }
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        return expiresAt < today
+    }
 
     var body: some View {
         HStack {
@@ -17,9 +25,32 @@ struct ItemRow: View {
             Spacer()
             VStack(alignment: .trailing, spacing: 4) {
                 if let expires = item.expiresAt {
-                    Text(expires, format: .dateTime.month().day())
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    ZStack(alignment: .topTrailing) {
+                        Text(expires, format: .dateTime.month().day())
+                            .font(.caption)
+                            .foregroundStyle(isExpired ? .red : .secondary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(
+                                Capsule()
+                                    .fill(isExpired ? Color.red.opacity(0.15) : Color.clear)
+                            )
+
+                        if isExpired {
+                            Circle()
+                                .fill(.red)
+                                .frame(width: 8, height: 8)
+                                .offset(x: 3, y: -3)
+                        }
+                    }
+                }
+
+                if let onDelete {
+                    Button(role: .destructive, action: onDelete) {
+                        Label("Delete", systemImage: "trash")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
         }

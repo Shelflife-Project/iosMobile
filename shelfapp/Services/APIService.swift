@@ -313,6 +313,27 @@ class APIService {
         return dto.toDomain()
     }
 
+    func updateShoppingItemAmount(storageId: Int, itemId: Int, amountToBuy: Int) async throws -> ShoppingListItem {
+        guard let url = normalizeURL("api/storages/\(storageId)/shoppinglist/\(itemId)") else { throw APIError.invalidURL }
+
+        let payload: [String: Any] = [
+            "amountToBuy": amountToBuy
+        ]
+        let jsonData = try JSONSerialization.data(withJSONObject: payload)
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.allHTTPHeaderFields = buildHeaders()
+        request.httpBody = jsonData
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validateResponse(response)
+
+        let decoder = JSONDecoder()
+        let dto = try decoder.decode(ShoppingListItemDTO.self, from: data)
+        return dto.toDomain()
+    }
+
     func deleteShoppingItem(storageId: Int, itemId: Int) async throws {
         guard let url = normalizeURL("api/storages/\(storageId)/shoppinglist/\(itemId)") else { throw APIError.invalidURL }
 
