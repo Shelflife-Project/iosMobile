@@ -54,6 +54,7 @@ struct RootView: View {
                     .tabItem {
                         Label(TabItem.notifications.rawValue, systemImage: TabItem.notifications.icon)
                     }
+                    .badge(notificationsContext.invites.isEmpty ? nil : "\(notificationsContext.invites.count)")
                     .tag(TabItem.notifications)
 
                 ProfileView()

@@ -9,9 +9,12 @@ import SwiftUI
 
 @main
 struct shelfappApp: App {
+    @AppStorage("darkModeEnabled") private var darkModeEnabled = false
+
     var body: some Scene {
         WindowGroup {
             RootView()
+                .preferredColorScheme(darkModeEnabled ? .dark : .light)
         }
     }
 }

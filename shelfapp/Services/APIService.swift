@@ -383,6 +383,55 @@ class APIService {
         try validateResponse(response)
     }
 
+    // MARK: - User API
+
+    func updateUser(id: Int, username: String) async throws -> User {
+        guard let url = normalizeURL("api/users/\(id)") else { throw APIError.invalidURL }
+
+        let payload: [String: Any] = ["username": username]
+        let jsonData = try JSONSerialization.data(withJSONObject: payload)
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "PATCH"
+        request.allHTTPHeaderFields = buildHeaders()
+        request.httpBody = jsonData
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validateResponse(response)
+
+        let decoder = JSONDecoder()
+        let dto = try decoder.decode(UserDTO.self, from: data)
+        return dto.toDomain()
+    }
+
+    func uploadUserPfp(userId: Int, imageData: Data, fileName: String = "profile.jpg", mimeType: String = "image/jpeg") async throws {
+        guard let url = normalizeURL("api/users/\(userId)/pfp") else { throw APIError.invalidURL }
+
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+
+        var headers: [String: String] = [:]
+        if let token = token {
+            headers["Authorization"] = "Bearer \(token)"
+        }
+        headers["Content-Type"] = "multipart/form-data; boundary=\(boundary)"
+        request.allHTTPHeaderFields = headers
+
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(fileName)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: \(mimeType)\r\n\r\n".data(using: .utf8)!)
+        body.append(imageData)
+        body.append("\r\n".data(using: .utf8)!)
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+
+        request.httpBody = body
+
+        let (_, response) = try await URLSession.shared.data(for: request)
+        try validateResponse(response)
+    }
+
     // MARK: - Response Validation
 
     private func validateResponse(_ response: URLResponse) throws {

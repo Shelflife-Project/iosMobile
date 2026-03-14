@@ -2,7 +2,7 @@ import SwiftUI
 
 struct AppSettingsView: View {
     @State private var notificationsEnabled = true
-    @State private var darkModeEnabled = false
+    @AppStorage("darkModeEnabled") private var darkModeEnabled = false
 
     var body: some View {
         Form {

@@ -4,6 +4,8 @@ struct ProfileView: View {
     @Environment(ProfileContext.self) private var profileContext
     @Environment(AuthContext.self) private var authContext
     @State private var viewModel = ProfileViewModel()
+    @State private var showEditSheet = false
+    @State private var profileImageRefreshToken = UUID().uuidString
 
     private var usernameText: String {
         viewModel.displayValue(profileContext.currentUser?.username)
@@ -13,7 +15,12 @@ struct ProfileView: View {
         guard let userId = profileContext.currentUser?.serverId else {
             return nil
         }
-        return APIService.shared.userPfpURL(userId: userId)
+        guard let baseURL = APIService.shared.userPfpURL(userId: userId) else {
+            return nil
+        }
+        var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)
+        components?.queryItems = [URLQueryItem(name: "v", value: profileImageRefreshToken)]
+        return components?.url
     }
 
     var body: some View {
@@ -41,6 +48,12 @@ struct ProfileView: View {
                             placeholder: "person.crop.circle",
                             size: 32
                         )
+                    }
+
+                    Button {
+                        showEditSheet = true
+                    } label: {
+                        Label("Edit Account", systemImage: "pencil")
                     }
                 }
 
@@ -84,6 +97,13 @@ struct ProfileView: View {
             .onAppear {
                 Task {
                     await profileContext.refreshCurrentUser(authContext: authContext)
+                }
+            }
+            .sheet(isPresented: $showEditSheet) {
+                if let user = profileContext.currentUser {
+                    EditAccountSheet(user: user, isPresented: $showEditSheet) {
+                        profileImageRefreshToken = UUID().uuidString
+                    }
                 }
             }
         }

@@ -78,6 +78,7 @@ struct SignupFormView: View {
             .foregroundStyle(.white)
             .cornerRadius(8)
             .disabled(authContext.isLoading || username.isEmpty || email.isEmpty || password.isEmpty || passwordRepeat.isEmpty)
+            .shadow(radius: 4, x: 3, y: 3)
         }
     }
 
