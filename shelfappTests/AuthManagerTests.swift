@@ -2,32 +2,25 @@
 //  AuthManagerTests.swift
 //  shelfappTests
 //
-//  Tests for AuthManager state management.
+//  Legacy filename retained; tests now validate current AuthService behavior.
 //
 
 import Testing
 import Foundation
 @testable import shelfapp
 
-// MARK: - AuthManager Tests
-
 struct AuthManagerTests {
 
-    @Test func sharedInstanceExists() {
-        let manager = AuthManager.shared
-        #expect(manager != nil)
+    @Test func authServiceSingletonExists() {
+        let service = AuthService.shared
+        #expect(service.baseURL.isEmpty == false)
     }
 
-    @Test func logoutClearsState() {
-        let manager = AuthManager.shared
-        manager.logout()
-        #expect(manager.isAuthenticated == false)
-        #expect(manager.currentUser == nil)
-        #expect(manager.errorMessage == nil)
-    }
+    @Test func clearTokenRemovesStoredToken() {
+        AuthService.shared.saveToken("test-token")
+        #expect(AuthService.shared.getStoredToken() == "test-token")
 
-    @Test func initialLoadingIsFalse() {
-        let manager = AuthManager.shared
-        #expect(manager.isLoading == false)
+        AuthService.shared.clearToken()
+        #expect(AuthService.shared.getStoredToken() == nil)
     }
 }

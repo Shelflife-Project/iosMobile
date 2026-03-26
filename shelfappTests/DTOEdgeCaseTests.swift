@@ -14,7 +14,7 @@ import Foundation
 struct StorageItemDTODateParsingTests {
 
     @Test func parsesLocalDateFormat() {
-        let dto = StorageItemDTO(id: 1, product: nil, expiresAt: "2026-03-15", createdAt: "2026-02-27T10:00:00Z")
+        let dto = StorageItemDTO(id: 1, storage: nil, product: nil, expiresAt: "2026-03-15", createdAt: "2026-02-27T10:00:00Z")
         let item = dto.toDomain()
 
         let calendar = Calendar.current
@@ -25,25 +25,25 @@ struct StorageItemDTODateParsingTests {
     }
 
     @Test func parsesISO8601ExpiresAt() {
-        let dto = StorageItemDTO(id: 1, product: nil, expiresAt: "2026-03-15T00:00:00Z", createdAt: "2026-02-27T10:00:00Z")
+        let dto = StorageItemDTO(id: 1, storage: nil, product: nil, expiresAt: "2026-03-15T00:00:00Z", createdAt: "2026-02-27T10:00:00Z")
         let item = dto.toDomain()
         #expect(item.expiresAt != nil)
     }
 
     @Test func parsesCreatedAtWithFractionalSeconds() {
-        let dto = StorageItemDTO(id: 1, product: nil, expiresAt: nil, createdAt: "2026-02-27T10:30:45.123Z")
+        let dto = StorageItemDTO(id: 1, storage: nil, product: nil, expiresAt: nil, createdAt: "2026-02-27T10:30:45.123Z")
         let item = dto.toDomain()
         #expect(item.createdAt <= Date())
     }
 
     @Test func parsesCreatedAtWithoutFractionalSeconds() {
-        let dto = StorageItemDTO(id: 1, product: nil, expiresAt: nil, createdAt: "2026-02-27T10:30:45Z")
+        let dto = StorageItemDTO(id: 1, storage: nil, product: nil, expiresAt: nil, createdAt: "2026-02-27T10:30:45Z")
         let item = dto.toDomain()
         #expect(item.createdAt <= Date())
     }
 
     @Test func invalidCreatedAtFallsBackToNow() {
-        let dto = StorageItemDTO(id: 1, product: nil, expiresAt: nil, createdAt: "not-a-date")
+        let dto = StorageItemDTO(id: 1, storage: nil, product: nil, expiresAt: nil, createdAt: "not-a-date")
         let before = Date()
         let item = dto.toDomain()
         let after = Date()
@@ -52,7 +52,7 @@ struct StorageItemDTODateParsingTests {
     }
 
     @Test func nilExpiresAtConvertsToNilDate() {
-        let dto = StorageItemDTO(id: 1, product: nil, expiresAt: nil, createdAt: "2026-02-27T10:00:00Z")
+        let dto = StorageItemDTO(id: 1, storage: nil, product: nil, expiresAt: nil, createdAt: "2026-02-27T10:00:00Z")
         let item = dto.toDomain()
         #expect(item.expiresAt == nil)
     }
@@ -64,7 +64,7 @@ struct DTONestedProductTests {
 
     @Test func storageItemDTOPreservesNestedProduct() {
         let productDTO = ProductDTO(id: 99, ownerId: 5, name: "Eggs", category: "Dairy", expirationDaysDelta: 21, barcode: "EGG123")
-        let dto = StorageItemDTO(id: 10, product: productDTO, expiresAt: "2026-04-01", createdAt: "2026-03-01T00:00:00Z")
+        let dto = StorageItemDTO(id: 10, storage: nil, product: productDTO, expiresAt: "2026-04-01", createdAt: "2026-03-01T00:00:00Z")
         let item = dto.toDomain()
 
         #expect(item.product?.name == "Eggs")

@@ -35,4 +35,22 @@ struct DateUtilsTests {
         let farFuture = Date.daysFromNow(365)
         #expect(farFuture > Date())
     }
+
+    @Test func startOfDayResetsTimeComponents() {
+        var components = DateComponents()
+        components.year = 2026
+        components.month = 3
+        components.day = 26
+        components.hour = 18
+        components.minute = 45
+        components.second = 12
+
+        let date = Calendar.current.date(from: components)!
+        let start = date.startOfDay
+        let startComponents = Calendar.current.dateComponents([.hour, .minute, .second], from: start)
+
+        #expect(startComponents.hour == 0)
+        #expect(startComponents.minute == 0)
+        #expect(startComponents.second == 0)
+    }
 }

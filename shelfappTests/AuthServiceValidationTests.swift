@@ -143,24 +143,10 @@ struct AuthServiceTokenTests {
         }
     }
 
-    @Test func logoutClearsTokenAndUser() {
+    @Test func logoutClearsToken() {
         AuthService.shared.saveToken("some-token")
         AuthService.shared.logout()
         #expect(AuthService.shared.getStoredToken() == nil)
-        #expect(AuthService.shared.getStoredUser() == nil)
-    }
-
-    @Test func saveAndRetrieveUser() {
-        let user = User(username: "testuser", email: "test@test.com", admin: false, serverId: 42)
-        AuthService.shared.saveUser(user)
-
-        let retrieved = AuthService.shared.getStoredUser()
-        #expect(retrieved?.username == "testuser")
-        #expect(retrieved?.email == "test@test.com")
-        #expect(retrieved?.serverId == 42)
-
-        // Cleanup
-        AuthService.shared.logout()
     }
 }
 

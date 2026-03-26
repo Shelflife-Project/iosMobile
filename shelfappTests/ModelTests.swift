@@ -69,7 +69,7 @@ struct ProductModelTests {
     }
 
     @Test func productInitializesWithAllProperties() {
-        let ownerId = UUID()
+        let ownerId = 123
         let product = Product(
             name: "Yogurt",
             category: "Dairy",

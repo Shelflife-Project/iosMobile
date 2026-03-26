@@ -111,7 +111,7 @@ struct StorageItemDTOTests {
 
     @Test func storageItemDTOConvertsToDomain() {
         let productDTO = ProductDTO(id: 1, ownerId: nil, name: "Butter", category: "Dairy", expirationDaysDelta: 30, barcode: nil)
-        let dto = StorageItemDTO(id: 5, product: productDTO, expiresAt: "2026-04-01T00:00:00Z", createdAt: "2026-02-27T12:00:00Z")
+        let dto = StorageItemDTO(id: 5, storage: nil, product: productDTO, expiresAt: "2026-04-01T00:00:00Z", createdAt: "2026-02-27T12:00:00Z")
         let item = dto.toDomain()
         #expect(item.product?.name == "Butter")
         #expect(item.expiresAt != nil)
@@ -119,7 +119,7 @@ struct StorageItemDTOTests {
     }
 
     @Test func storageItemDTOHandlesNullExpiry() {
-        let dto = StorageItemDTO(id: 1, product: nil, expiresAt: nil, createdAt: "2026-02-27T12:00:00Z")
+        let dto = StorageItemDTO(id: 1, storage: nil, product: nil, expiresAt: nil, createdAt: "2026-02-27T12:00:00Z")
         let item = dto.toDomain()
         #expect(item.product == nil)
         #expect(item.expiresAt == nil)

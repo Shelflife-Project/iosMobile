@@ -251,6 +251,50 @@ final class AuthenticatedFlowUITests: XCTestCase {
     }
 
     @MainActor
+    func testShoppingListShowsPlusMinusControlsWhenItemsExist() throws {
+        guard loginIfNeeded() else {
+            throw XCTSkip("Cannot authenticate")
+        }
+
+        let shoppingCard = app.staticTexts["Shopping List"]
+        XCTAssertTrue(shoppingCard.waitForExistence(timeout: 5))
+        shoppingCard.tap()
+
+        XCTAssertTrue(app.navigationBars["Shopping List"].waitForExistence(timeout: 5))
+
+        if app.staticTexts["No items to purchase"].exists {
+            throw XCTSkip("Shopping list is empty")
+        }
+
+        XCTAssertTrue(app.buttons["shopping.plus"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["shopping.minus"].exists)
+    }
+
+    @MainActor
+    func testShoppingListRowSwipeRevealsDoneAndDelete() throws {
+        guard loginIfNeeded() else {
+            throw XCTSkip("Cannot authenticate")
+        }
+
+        let shoppingCard = app.staticTexts["Shopping List"]
+        XCTAssertTrue(shoppingCard.waitForExistence(timeout: 5))
+        shoppingCard.tap()
+
+        XCTAssertTrue(app.navigationBars["Shopping List"].waitForExistence(timeout: 5))
+
+        if app.staticTexts["No items to purchase"].exists {
+            throw XCTSkip("Shopping list is empty")
+        }
+
+        let firstCell = app.cells.firstMatch
+        XCTAssertTrue(firstCell.waitForExistence(timeout: 5))
+        firstCell.swipeLeft()
+
+        XCTAssertTrue(app.buttons["Done"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["Delete"].exists)
+    }
+
+    @MainActor
     func testSwitchToProfileTab() throws {
         guard loginIfNeeded() else {
             throw XCTSkip("Cannot authenticate")
