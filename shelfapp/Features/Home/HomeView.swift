@@ -102,8 +102,8 @@ struct HomeView: View {
     private func refreshContexts() async {
         await productsContext.fetch()
         await storageContext.fetch()
-        await shoppingListContext.fetchAll(storages: storageContext.storages)
-        await notificationsContext.fetchInvites()
+        await shoppingListContext.fetchAggregated()
+        await notificationsContext.fetchAll()
         await profileContext.refreshCurrentUser(authContext: authContext)
     }
 }

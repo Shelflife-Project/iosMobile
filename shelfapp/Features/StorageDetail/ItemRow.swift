@@ -2,7 +2,6 @@ import SwiftUI
 
 struct ItemRow: View {
     var item: StorageItem
-    var onDelete: (() -> Void)? = nil
 
     private var isExpired: Bool {
         guard let expiresAt = item.expiresAt else { return false }
@@ -12,17 +11,19 @@ struct ItemRow: View {
     }
 
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 5) {
                 Text(item.product?.name ?? "Unknown")
-                    .fontWeight(.semibold)
+                    .font(.headline)
                 if let category = item.product?.category, !category.isEmpty {
                     Text(category)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
+
             Spacer()
+
             VStack(alignment: .trailing, spacing: 4) {
                 if let expires = item.expiresAt {
                     ZStack(alignment: .topTrailing) {
@@ -44,15 +45,8 @@ struct ItemRow: View {
                         }
                     }
                 }
-
-                if isExpired, let onDelete {
-                    Button(role: .destructive, action: onDelete) {
-                        Image(systemName: "trash.fill")
-                            .font(.caption)
-                    }
-                    .buttonStyle(.plain)
-                }
             }
         }
+        .padding(.vertical, 6)
     }
 }

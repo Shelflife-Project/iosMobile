@@ -1,5 +1,20 @@
 import SwiftUI
 
+func computeNotificationsBadgeCount(
+    invites: [PendingInviteInfo],
+    runningLowItems: [RunningLowNotification],
+    shoppingItems: [ShoppingListItem]
+) -> Int {
+    let unresolvedRunningLowCount = runningLowItems.filter { runningLow in
+        !shoppingItems.contains { shoppingItem in
+            shoppingItem.storage?.serverId == runningLow.storage.serverId
+                && shoppingItem.product?.serverId == runningLow.product.serverId
+        }
+    }.count
+
+    return invites.count + unresolvedRunningLowCount
+}
+
 struct RootView: View {
     @State private var authContext = AuthContext()
     @State private var selectedTab: TabItem = .home
@@ -14,6 +29,14 @@ struct RootView: View {
     @State private var storageContext = StorageContext()
 
     init() {}
+
+    private var notificationsBadgeCount: Int {
+        computeNotificationsBadgeCount(
+            invites: notificationsContext.invites,
+            runningLowItems: notificationsContext.runningLowItems,
+            shoppingItems: shoppingListContext.items
+        )
+    }
 
     enum TabItem: String, CaseIterable {
         case home = "Home"
@@ -54,7 +77,7 @@ struct RootView: View {
                     .tabItem {
                         Label(TabItem.notifications.rawValue, systemImage: TabItem.notifications.icon)
                     }
-                    .badge(notificationsContext.invites.isEmpty ? nil : "\(notificationsContext.invites.count)")
+                    .badge(notificationsBadgeCount == 0 ? nil : "\(notificationsBadgeCount)")
                     .tag(TabItem.notifications)
 
                 ProfileView()
@@ -111,8 +134,8 @@ struct RootView: View {
 
         await productsContext.fetch()
         await storageContext.fetch()
-        await shoppingListContext.fetchAll(storages: storageContext.storages)
-        await notificationsContext.fetchInvites()
+        await shoppingListContext.fetchAggregated()
+        await notificationsContext.fetchAll()
     }
 
     private func clearContexts() {
@@ -124,9 +147,10 @@ struct RootView: View {
 
         shoppingListContext.items = []
         shoppingListContext.errorMessage = nil
-        shoppingListContext.selectedStorageId = nil
 
         notificationsContext.invites = []
+        notificationsContext.runningLowItems = []
+        notificationsContext.aboutToExpireItems = []
         notificationsContext.errorMessage = nil
 
         storageDetailContext.members = []

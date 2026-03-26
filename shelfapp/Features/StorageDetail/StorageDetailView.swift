@@ -4,6 +4,7 @@ struct StorageDetailView: View {
     @Environment(StorageDetailContext.self) private var storageDetailContext
     @Environment(StorageContext.self) private var storageContext
     @Environment(ShoppingListContext.self) private var shoppingListContext
+    @Environment(NotificationsContext.self) private var notificationsContext
     @Environment(ProfileContext.self) private var profileContext
     var storage: Storage
     @State private var viewModel = StorageDetailViewModel()
@@ -19,10 +20,14 @@ struct StorageDetailView: View {
             if !storage.items.isEmpty {
                 Section {
                     ForEach(storage.items) { item in
-                        ItemRow(item: item) {
-                            deleteItem(item)
-                        }
+                        ItemRow(item: item)
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button(role: .destructive) {
+                                    deleteItem(item)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+
                                 // Shopping List action
                                 let inShoppingList = storage.shoppingItems.contains(where: { $0.product?.serverId == item.product?.serverId })
                                 if inShoppingList {
@@ -31,7 +36,6 @@ struct StorageDetailView: View {
                                             Task {
                                                 await storageDetailContext.removeFromShoppingList(product: product, from: storage)
                                                 await refreshSharedContexts()
-                                                viewModel.refreshContent()
                                             }
                                         }
                                     } label: {
@@ -44,7 +48,6 @@ struct StorageDetailView: View {
                                             Task {
                                                 await storageDetailContext.addToShoppingList(product: product, to: storage)
                                                 await refreshSharedContexts()
-                                                viewModel.refreshContent()
                                             }
                                         }
                                     } label: {
@@ -73,56 +76,6 @@ struct StorageDetailView: View {
                             .foregroundStyle(.blue)
                             .symbolEffect(.drawOn, isActive: viewModel.animateItems)
                         Text("Items in Storage")
-                    }
-                }
-            }
-
-            if !storage.shoppingItems.isEmpty {
-                Section {
-                    ForEach(storage.shoppingItems) { item in
-                        ShoppingItemRow(
-                            item: item,
-                            onIncrement: {
-                                Task {
-                                    await storageDetailContext.updateShoppingListAmount(
-                                        item: item,
-                                        in: storage,
-                                        amountToBuy: item.amountToBuy + 1
-                                    )
-                                    await refreshSharedContexts()
-                                    viewModel.refreshContent()
-                                }
-                            },
-                            onDecrement: {
-                                guard item.amountToBuy > 1 else { return }
-                                Task {
-                                    await storageDetailContext.updateShoppingListAmount(
-                                        item: item,
-                                        in: storage,
-                                        amountToBuy: item.amountToBuy - 1
-                                    )
-                                    await refreshSharedContexts()
-                                    viewModel.refreshContent()
-                                }
-                            },
-                            onComplete: {
-                                Task {
-                                    await storageDetailContext.completeShoppingItem(item, in: storage)
-                                    await refreshSharedContexts()
-                                    viewModel.refreshContent()
-                                }
-                            }
-                        )
-                    }
-                    .onDelete { offsets in
-                        deleteShoppingItems(offsets: offsets)
-                    }
-                } header: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "cart.fill")
-                            .foregroundStyle(.orange)
-                            .symbolEffect(.drawOn, isActive: viewModel.animateItems)
-                        Text("Shopping List")
                     }
                 }
             }
@@ -176,14 +129,14 @@ struct StorageDetailView: View {
                 }
             }
 
-            if storage.items.isEmpty && storage.shoppingItems.isEmpty && storageDetailContext.members.isEmpty && !storageDetailContext.isLoadingMembers {
+            if storage.items.isEmpty && storageDetailContext.members.isEmpty && !storageDetailContext.isLoadingMembers {
                 VStack(alignment: .center, spacing: 12) {
                     Image(systemName: "tray")
                         .font(.system(size: 40))
                         .foregroundStyle(.gray)
                     Text("Empty Storage")
                         .font(.headline)
-                    Text("Add items or shopping list items to get started")
+                    Text("Add items to get started")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -191,7 +144,6 @@ struct StorageDetailView: View {
                 .padding()
             }
         }
-        .id(viewModel.contentRefreshID)
         .scrollContentBackground(.hidden)
         .appGradientBackground()
         .navigationTitle(storage.name)
@@ -226,7 +178,9 @@ struct StorageDetailView: View {
                     set: { viewModel.showAddItem = $0 }
                 ),
                 onAdded: {
-                    viewModel.refreshContent()
+                    Task {
+                        await refreshSharedContexts()
+                    }
                 }
             )
         }
@@ -315,21 +269,13 @@ struct StorageDetailView: View {
         Task {
             await storageDetailContext.deleteItem(item, from: storage)
             await refreshSharedContexts()
-            viewModel.refreshContent()
-        }
-    }
-
-    private func deleteShoppingItems(offsets: IndexSet) {
-        Task {
-            await storageDetailContext.deleteShoppingItems(at: offsets, from: storage)
-            await refreshSharedContexts()
-            viewModel.refreshContent()
         }
     }
 
     private func refreshSharedContexts() async {
         await storageContext.fetch()
-        shoppingListContext.sync(from: storageContext.storages)
+        await shoppingListContext.fetchAggregated()
+        await notificationsContext.refreshAll()
     }
 }
 

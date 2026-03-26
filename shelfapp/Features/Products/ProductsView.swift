@@ -35,25 +35,46 @@ struct ProductsView: View {
                 if productsContext.isLoading {
                     ProgressView()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if productsContext.products.isEmpty {
-                    VStack(spacing: 16) {
-                        Image(systemName: "cube")
-                            .font(.system(size: 48))
-                            .foregroundStyle(.gray)
-                        Text("No Products")
-                            .font(.headline)
-                        Text("Create your first product to get started")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Button(action: { viewModel.showCreateForm = true }) {
-                            Label("Create Product", systemImage: "plus.circle.fill")
-                                .fontWeight(.semibold)
-                        }
-                        .buttonStyle(.borderedProminent)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                 } else {
                     List {
+                        Section {
+                            HStack(spacing: 10) {
+                                TextField("Search products...", text: Binding(
+                                    get: { viewModel.searchText },
+                                    set: { viewModel.searchText = $0 }
+                                ))
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+
+                                Button {
+                                    viewModel.showPaginationSettings = true
+                                } label: {
+                                    Image(systemName: "gearshape.fill")
+                                        .font(.title3)
+                                        .symbolEffect(.pulse, isActive: viewModel.animateSettings)
+                                }
+                                .buttonStyle(.bordered)
+                                .accessibilityLabel("Pagination settings")
+                            }
+                        }
+
+                        if productsContext.products.isEmpty {
+                            Section {
+                                VStack(spacing: 12) {
+                                    Image(systemName: "cube")
+                                        .font(.system(size: 40))
+                                        .foregroundStyle(.gray)
+                                    Text("No products found")
+                                        .font(.headline)
+                                    Text("Create your first product to get started")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .center)
+                                .padding(.vertical, 8)
+                            }
+                        }
+
                         if !categories.isEmpty {
                             Picker("Category", selection: Binding(
                                 get: { viewModel.selectedCategory },
@@ -101,10 +122,6 @@ struct ProductsView: View {
                     .scrollContentBackground(.hidden)
                 }
             }
-            .searchable(text: Binding(
-                get: { viewModel.searchText },
-                set: { viewModel.searchText = $0 }
-            ), prompt: "Search products")
             .navigationTitle("Products")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
@@ -134,6 +151,55 @@ struct ProductsView: View {
                     )
                 }
             }
+            .sheet(isPresented: Binding(
+                get: { viewModel.showPaginationSettings },
+                set: { viewModel.showPaginationSettings = $0 }
+            )) {
+                NavigationStack {
+                    Form {
+                        Picker("Page size", selection: Binding(
+                            get: { viewModel.pageSize },
+                            set: { viewModel.pageSize = $0 }
+                        )) {
+                            ForEach(viewModel.pageSizeOptions, id: \.self) { size in
+                                Text(viewModel.pageSizeLabel(size)).tag(size)
+                            }
+                        }
+
+                        HStack {
+                            Button {
+                                Task { await productsContext.previousPage() }
+                            } label: {
+                                Label("Previous", systemImage: "chevron.left")
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(!productsContext.hasPrevious || productsContext.isLoading || viewModel.pageSize == 0)
+
+                            Spacer()
+                            Text("Page \(productsContext.currentPage + 1)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Spacer()
+
+                            Button {
+                                Task { await productsContext.nextPage() }
+                            } label: {
+                                Label("Next", systemImage: "chevron.right")
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(!productsContext.hasNext || productsContext.isLoading || viewModel.pageSize == 0)
+                        }
+                    }
+                    .navigationTitle("List Settings")
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") {
+                                viewModel.showPaginationSettings = false
+                            }
+                        }
+                    }
+                }
+            }
             .alert("Error", isPresented: Binding(
                 get: { productsContext.errorMessage != nil },
                 set: { isPresented in
@@ -147,8 +213,21 @@ struct ProductsView: View {
                 Text(productsContext.errorMessage ?? "An unknown error occurred")
             }
             .onAppear {
+                viewModel.searchText = productsContext.searchText
+                viewModel.pageSize = productsContext.pageSize
+                viewModel.triggerSettingsAnimation()
                 Task {
-                    await productsContext.fetch()
+                    await productsContext.fetch(search: viewModel.searchText, page: 0, size: viewModel.pageSize)
+                }
+            }
+            .onChange(of: viewModel.searchText) { _, search in
+                Task {
+                    await productsContext.fetch(search: search, page: 0)
+                }
+            }
+            .onChange(of: viewModel.pageSize) { _, pageSize in
+                Task {
+                    await productsContext.fetch(page: 0, size: pageSize)
                 }
             }
         }

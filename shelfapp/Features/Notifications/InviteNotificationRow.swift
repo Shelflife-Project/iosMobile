@@ -7,42 +7,48 @@ struct InviteNotificationRow: View {
     var onDecline: () -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "envelope.badge.fill")
-                .foregroundStyle(.orange)
-                .font(.system(size: 20))
-                .symbolEffect(.drawOn, isActive: animateEnvelope)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 12) {
+                Image(systemName: "envelope.badge.fill")
+                    .foregroundStyle(.orange)
+                    .font(.system(size: 20))
+                    .symbolEffect(.drawOn, isActive: animateEnvelope)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(invite.storageName)
-                    .font(.headline)
-                Text("Invited by \(invite.invitedBy)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(invite.storageName)
+                        .font(.headline)
+                    Text("Invited by \(invite.invitedBy)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
             }
 
-            Spacer()
-
-            HStack(spacing: 8) {
+            HStack(spacing: 10) {
                 Button {
                     onAccept()
                 } label: {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.title2)
-                        .foregroundStyle(.green)
+                    Label("Accept", systemImage: "checkmark")
+                        .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.borderedProminent)
+                .tint(.green)
 
                 Button {
                     onDecline()
                 } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.title2)
-                        .foregroundStyle(.red)
+                    Label("Decline", systemImage: "xmark")
+                        .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.bordered)
+                .tint(.red)
             }
         }
-        .padding(.vertical, 4)
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color(.secondarySystemBackground).opacity(0.75))
+        )
     }
 }

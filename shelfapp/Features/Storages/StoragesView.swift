@@ -43,6 +43,27 @@ struct StoragesView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             } else {
                 List {
+                    Section {
+                        HStack(spacing: 10) {
+                            TextField("Search storages...", text: Binding(
+                                get: { viewModel.searchText },
+                                set: { viewModel.searchText = $0 }
+                            ))
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+
+                            Button {
+                                viewModel.showPaginationSettings = true
+                            } label: {
+                                Image(systemName: "gearshape.fill")
+                                    .font(.title3)
+                                    .symbolEffect(.pulse, isActive: viewModel.animateSettings)
+                            }
+                            .buttonStyle(.bordered)
+                            .accessibilityLabel("Pagination settings")
+                        }
+                    }
+
                     if !ownedStorages.isEmpty {
                         Section {
                             ForEach(ownedStorages) { storage in
@@ -150,6 +171,55 @@ struct StoragesView: View {
                 )
             }
         }
+        .sheet(isPresented: Binding(
+            get: { viewModel.showPaginationSettings },
+            set: { viewModel.showPaginationSettings = $0 }
+        )) {
+            NavigationStack {
+                Form {
+                    Picker("Page size", selection: Binding(
+                        get: { viewModel.pageSize },
+                        set: { viewModel.pageSize = $0 }
+                    )) {
+                        ForEach(viewModel.pageSizeOptions, id: \.self) { size in
+                            Text(viewModel.pageSizeLabel(size)).tag(size)
+                        }
+                    }
+
+                    HStack {
+                        Button {
+                            Task { await storageContext.previousPage() }
+                        } label: {
+                            Label("Previous", systemImage: "chevron.left")
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(!storageContext.hasPrevious || storageContext.isLoading || viewModel.pageSize == 0)
+
+                        Spacer()
+                        Text("Page \(storageContext.currentPage + 1)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+
+                        Button {
+                            Task { await storageContext.nextPage() }
+                        } label: {
+                            Label("Next", systemImage: "chevron.right")
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(!storageContext.hasNext || storageContext.isLoading || viewModel.pageSize == 0)
+                    }
+                }
+                .navigationTitle("List Settings")
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") {
+                            viewModel.showPaginationSettings = false
+                        }
+                    }
+                }
+            }
+        }
         .alert("Error", isPresented: Binding(
             get: { storageContext.errorMessage != nil },
             set: { isPresented in
@@ -164,8 +234,20 @@ struct StoragesView: View {
         }
         .onAppear {
             viewModel.triggerAnimations()
+            viewModel.searchText = storageContext.searchText
+            viewModel.pageSize = storageContext.pageSize
             Task {
-                await storageContext.fetch()
+                await storageContext.fetch(search: viewModel.searchText, page: 0, size: viewModel.pageSize)
+            }
+        }
+        .onChange(of: viewModel.searchText) { _, search in
+            Task {
+                await storageContext.fetch(search: search, page: 0)
+            }
+        }
+        .onChange(of: viewModel.pageSize) { _, pageSize in
+            Task {
+                await storageContext.fetch(page: 0, size: pageSize)
             }
         }
     }

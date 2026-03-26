@@ -112,6 +112,9 @@ struct ProfileView: View {
                     hasAnimatedLogout = true
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
                         animateLogout = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
+                            animateLogout = false
+                        }
                     }
                 }
                 Task {
