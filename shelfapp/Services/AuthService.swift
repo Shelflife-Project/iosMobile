@@ -175,7 +175,23 @@ class AuthService {
         return userDTO.toDomain()
     }
 
+    func logoutRemote() async {
+        guard let token = getStoredToken(),
+              let url = URL(string: "\(APIService.shared.baseURL)/api/auth/logout") else {
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        _ = try? await URLSession.shared.data(for: request)
+    }
+
     func logout() {
+        Task {
+            await logoutRemote()
+        }
         clearToken()
     }
 

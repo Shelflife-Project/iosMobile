@@ -14,6 +14,11 @@ class StorageContext {
     var storages: [Storage] = []
     var isLoading = false
     var errorMessage: String?
+    var searchText = ""
+    var currentPage = 0
+    var pageSize = 0
+    var hasNext = false
+    var hasPrevious = false
 
     private let apiService: APIService
 
@@ -21,26 +26,41 @@ class StorageContext {
         self.apiService = apiService
     }
 
-    func fetch() async {
+    func fetch(search: String? = nil, page: Int? = nil, size: Int? = nil) async {
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
 
+        if let search { searchText = search }
+        if let page { currentPage = max(0, page) }
+        if let size { pageSize = max(0, size) }
+
         do {
-            let remoteStorages = try await apiService.fetchStorages()
-
-            for storage in remoteStorages {
-                if let storageId = storage.serverId {
-                    storage.items = try await apiService.fetchStorageItems(storageId: storageId)
-                    storage.shoppingItems = try await apiService.fetchShoppingItems(storageId: storageId)
-                }
-            }
-
-            storages = remoteStorages.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            let result = try await apiService.fetchStoragesPage(
+                search: searchText,
+                size: pageSize,
+                page: currentPage
+            )
+            storages = result.items
+            hasNext = result.hasNext
+            hasPrevious = result.hasPrevious
+            currentPage = result.currentPage
         } catch {
             errorMessage = "Failed to fetch storages: \(error.localizedDescription)"
             storages = []
+            hasNext = false
+            hasPrevious = false
         }
+    }
+
+    func nextPage() async {
+        guard hasNext else { return }
+        await fetch(page: currentPage + 1)
+    }
+
+    func previousPage() async {
+        guard hasPrevious else { return }
+        await fetch(page: max(0, currentPage - 1))
     }
 
     func addNew(name: String, currentUser: User?) async {

@@ -7,7 +7,6 @@ class ShoppingListContext {
     var items: [ShoppingListItem] = []
     var isLoading = false
     var errorMessage: String?
-    var selectedStorageId: Int?
 
     private let apiService: APIService
 
@@ -15,52 +14,68 @@ class ShoppingListContext {
         self.apiService = apiService
     }
 
-    func fetchAll(storages: [Storage]) async {
+    func fetchAggregated() async {
         isLoading = true
         errorMessage = nil
-        selectedStorageId = nil
         defer { isLoading = false }
 
         do {
-            var allItems: [ShoppingListItem] = []
-
-            for storage in storages {
-                guard let storageId = storage.serverId else { continue }
-                let remoteItems = try await apiService.fetchShoppingItems(storageId: storageId)
-                for item in remoteItems {
-                    item.storage = storage
-                }
-                storage.shoppingItems = remoteItems
-                allItems.append(contentsOf: remoteItems)
-            }
-
-            items = allItems
+            items = try await apiService.fetchAggregatedShoppingItems()
         } catch {
             errorMessage = "Failed to fetch shopping items: \(error.localizedDescription)"
             items = []
         }
     }
 
-    func sync(from storages: [Storage]) {
-        let allItems = storages.flatMap { $0.shoppingItems }
-        if let selectedStorageId {
-            items = allItems.filter { $0.storage?.serverId == selectedStorageId }
-        } else {
-            items = allItems
+    private func refreshItemsDirect() async throws {
+        items = try await apiService.fetchAggregatedShoppingItems()
+    }
+
+    private func resolveStorageId(for item: ShoppingListItem) async throws -> Int {
+        if let storageId = item.storage?.serverId {
+            return storageId
+        }
+
+        guard let itemId = item.serverId else {
+            throw APIError.invalidURL
+        }
+
+        let latest = try await apiService.fetchAggregatedShoppingItems()
+        items = latest
+
+        if let refreshed = latest.first(where: { $0.serverId == itemId }),
+           let storageId = refreshed.storage?.serverId {
+            return storageId
+        }
+
+        throw APIError.invalidURL
+    }
+
+    private func refreshedItem(for itemId: Int) async throws -> ShoppingListItem {
+        let latest = try await apiService.fetchAggregatedShoppingItems()
+        items = latest
+
+        guard let refreshed = latest.first(where: { $0.serverId == itemId }) else {
+            throw APIError.notFound
+        }
+
+        return refreshed
+    }
+
+    func fetchItems(storageId: Int) async {
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        do {
+            items = try await apiService.fetchShoppingItems(storageId: storageId)
+        } catch {
+            errorMessage = "Failed to fetch shopping items: \(error.localizedDescription)"
+            items = []
         }
     }
 
-    func fetchItems(storageId: Int, storageContext: StorageContext) async {
-        isLoading = true
-        errorMessage = nil
-        selectedStorageId = storageId
-        defer { isLoading = false }
-
-        await storageContext.fetch()
-        sync(from: storageContext.storages)
-    }
-
-    func addItem(storage: Storage, product: Product, amountToBuy: Int, storageContext: StorageContext) async {
+    func addItem(storage: Storage, product: Product, amountToBuy: Int) async {
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
@@ -76,24 +91,91 @@ class ShoppingListContext {
                 amountToBuy: amountToBuy
             )
             _ = item
-            await storageContext.fetch()
-            sync(from: storageContext.storages)
+            await fetchAggregated()
         } catch {
             errorMessage = "Failed to add shopping item: \(error.localizedDescription)"
         }
     }
 
-    func deleteItem(_ item: ShoppingListItem, from storage: Storage, storageContext: StorageContext) async {
+    func updateItemAmount(_ item: ShoppingListItem, amountToBuy: Int) async {
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
 
         do {
-            if let storageId = storage.serverId, let itemId = item.serverId {
+            guard let itemId = item.serverId else {
+                throw APIError.invalidURL
+            }
+
+            do {
+                let storageId = try await resolveStorageId(for: item)
+                _ = try await apiService.updateShoppingItemAmount(storageId: storageId, itemId: itemId, amountToBuy: amountToBuy)
+            } catch APIError.serverError(let statusCode) where statusCode == 403 {
+                let refreshed = try await refreshedItem(for: itemId)
+                let storageId = try await resolveStorageId(for: refreshed)
+                _ = try await apiService.updateShoppingItemAmount(storageId: storageId, itemId: itemId, amountToBuy: amountToBuy)
+            }
+
+            try await refreshItemsDirect()
+        } catch {
+            errorMessage = "Failed to update shopping item: \(error.localizedDescription)"
+        }
+    }
+
+    func completeItem(_ item: ShoppingListItem) async {
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        do {
+            guard let itemId = item.serverId else {
+                throw APIError.invalidURL
+            }
+
+            do {
+                let storageId = try await resolveStorageId(for: item)
+                try await apiService.completeShoppingItem(storageId: storageId, itemId: itemId)
+            } catch APIError.serverError(let statusCode) where statusCode == 403 {
+                let refreshed = try await refreshedItem(for: itemId)
+                let storageId = try await resolveStorageId(for: refreshed)
+
+                if let productId = refreshed.product?.serverId {
+                    let amount = max(1, refreshed.amountToBuy)
+                    for _ in 0..<amount {
+                        _ = try await apiService.addStorageItem(storageId: storageId, productId: productId, expiresAt: nil)
+                    }
+                    try await apiService.deleteShoppingItem(storageId: storageId, itemId: itemId)
+                } else {
+                    throw APIError.invalidURL
+                }
+            }
+
+            try await refreshItemsDirect()
+        } catch {
+            errorMessage = "Failed to add shopping item to storage: \(error.localizedDescription)"
+        }
+    }
+
+    func deleteItem(_ item: ShoppingListItem) async {
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        do {
+            guard let itemId = item.serverId else {
+                throw APIError.invalidURL
+            }
+
+            do {
+                let storageId = try await resolveStorageId(for: item)
+                try await apiService.deleteShoppingItem(storageId: storageId, itemId: itemId)
+            } catch APIError.serverError(let statusCode) where statusCode == 403 {
+                let refreshed = try await refreshedItem(for: itemId)
+                let storageId = try await resolveStorageId(for: refreshed)
                 try await apiService.deleteShoppingItem(storageId: storageId, itemId: itemId)
             }
-            await storageContext.fetch()
-            sync(from: storageContext.storages)
+
+            try await refreshItemsDirect()
         } catch {
             errorMessage = "Failed to delete shopping item: \(error.localizedDescription)"
         }

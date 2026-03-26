@@ -69,10 +69,24 @@ class APIService {
         return URL(string: urlString)
     }
 
+    private func appendQueryItems(to url: URL, items: [URLQueryItem]) -> URL? {
+        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return nil }
+        components.queryItems = items
+        return components.url
+    }
+
     // MARK: - Storage API
 
-    func fetchStorages() async throws -> [Storage] {
-        guard let url = normalizeURL("api/storages") else { throw APIError.invalidURL }
+    func fetchStoragesPage(search: String = "", size: Int = 0, page: Int = 0) async throws -> PaginatedResult<Storage> {
+        guard let baseURL = normalizeURL("api/storages") else { throw APIError.invalidURL }
+
+        var queryItems = [URLQueryItem(name: "search", value: search)]
+        if size > 0 {
+            queryItems.append(URLQueryItem(name: "page", value: String(page)))
+            queryItems.append(URLQueryItem(name: "size", value: String(size)))
+        }
+
+        guard let url = appendQueryItems(to: baseURL, items: queryItems) else { throw APIError.invalidURL }
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
@@ -82,7 +96,32 @@ class APIService {
         try validateResponse(response)
 
         let decoder = JSONDecoder()
-        return try decoder.decode([StorageDTO].self, from: data).map { $0.toDomain() }
+        if let pageResult = try? decoder.decode(PaginatedResponseDTO<StorageDTO>.self, from: data) {
+            return PaginatedResult(
+                items: pageResult.data.map { $0.toDomain() },
+                currentPage: pageResult.currentPage,
+                totalPages: pageResult.totalPages,
+                totalItems: pageResult.totalItems,
+                pageSize: pageResult.pageSize,
+                hasNext: pageResult.hasNext,
+                hasPrevious: pageResult.hasPrevious
+            )
+        }
+
+        let fallbackItems = try decoder.decode([StorageDTO].self, from: data).map { $0.toDomain() }
+        return PaginatedResult(
+            items: fallbackItems,
+            currentPage: 0,
+            totalPages: 1,
+            totalItems: fallbackItems.count,
+            pageSize: fallbackItems.count,
+            hasNext: false,
+            hasPrevious: false
+        )
+    }
+
+    func fetchStorages() async throws -> [Storage] {
+        try await fetchStoragesPage().items
     }
 
     func fetchStorage(id: Int) async throws -> Storage {
@@ -151,8 +190,16 @@ class APIService {
 
     // MARK: - Product API
 
-    func fetchProducts() async throws -> [Product] {
-        guard let url = normalizeURL("api/products") else { throw APIError.invalidURL }
+    func fetchProductsPage(search: String = "", size: Int = 0, page: Int = 0) async throws -> PaginatedResult<Product> {
+        guard let baseURL = normalizeURL("api/products") else { throw APIError.invalidURL }
+
+        var queryItems = [URLQueryItem(name: "search", value: search)]
+        if size > 0 {
+            queryItems.append(URLQueryItem(name: "page", value: String(page)))
+            queryItems.append(URLQueryItem(name: "size", value: String(size)))
+        }
+
+        guard let url = appendQueryItems(to: baseURL, items: queryItems) else { throw APIError.invalidURL }
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
@@ -162,7 +209,32 @@ class APIService {
         try validateResponse(response)
 
         let decoder = JSONDecoder()
-        return try decoder.decode([ProductDTO].self, from: data).map { $0.toDomain() }
+        if let pageResult = try? decoder.decode(PaginatedResponseDTO<ProductDTO>.self, from: data) {
+            return PaginatedResult(
+                items: pageResult.data.map { $0.toDomain() },
+                currentPage: pageResult.currentPage,
+                totalPages: pageResult.totalPages,
+                totalItems: pageResult.totalItems,
+                pageSize: pageResult.pageSize,
+                hasNext: pageResult.hasNext,
+                hasPrevious: pageResult.hasPrevious
+            )
+        }
+
+        let fallbackItems = try decoder.decode([ProductDTO].self, from: data).map { $0.toDomain() }
+        return PaginatedResult(
+            items: fallbackItems,
+            currentPage: 0,
+            totalPages: 1,
+            totalItems: fallbackItems.count,
+            pageSize: fallbackItems.count,
+            hasNext: false,
+            hasPrevious: false
+        )
+    }
+
+    func fetchProducts() async throws -> [Product] {
+        try await fetchProductsPage().items
     }
 
     func createProduct(name: String, category: String, expirationDaysDelta: Int, barcode: String?) async throws -> Product {
@@ -291,6 +363,20 @@ class APIService {
         return try decoder.decode([ShoppingListItemDTO].self, from: data).map { $0.toDomain() }
     }
 
+    func fetchAggregatedShoppingItems() async throws -> [ShoppingListItem] {
+        guard let url = normalizeURL("api/shoppinglist") else { throw APIError.invalidURL }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.allHTTPHeaderFields = buildHeaders()
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validateResponse(response)
+
+        let decoder = JSONDecoder()
+        return try decoder.decode([ShoppingListItemDTO].self, from: data).map { $0.toDomain() }
+    }
+
     func addShoppingItem(storageId: Int, productId: Int, amountToBuy: Int) async throws -> ShoppingListItem {
         guard let url = normalizeURL("api/storages/\(storageId)/shoppinglist") else { throw APIError.invalidURL }
 
@@ -343,6 +429,47 @@ class APIService {
 
         let (_, response) = try await URLSession.shared.data(for: request)
         try validateResponse(response)
+    }
+
+    func completeShoppingItem(storageId: Int, itemId: Int) async throws {
+        guard let url = normalizeURL("api/storages/\(storageId)/shoppinglist/\(itemId)") else { throw APIError.invalidURL }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = buildHeaders()
+
+        let (_, response) = try await URLSession.shared.data(for: request)
+        try validateResponse(response)
+    }
+
+    // MARK: - Expiry + Running Low Notifications API
+
+    func fetchAggregatedAboutToExpireItems() async throws -> [StorageItem] {
+        guard let url = normalizeURL("api/abouttoexpire") else { throw APIError.invalidURL }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.allHTTPHeaderFields = buildHeaders()
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validateResponse(response)
+
+        let decoder = JSONDecoder()
+        return try decoder.decode([StorageItemDTO].self, from: data).map { $0.toDomain() }
+    }
+
+    func fetchAggregatedRunningLowNotifications() async throws -> [RunningLowNotification] {
+        guard let url = normalizeURL("api/runninglow") else { throw APIError.invalidURL }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.allHTTPHeaderFields = buildHeaders()
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validateResponse(response)
+
+        let decoder = JSONDecoder()
+        return try decoder.decode([RunningLowNotificationDTO].self, from: data).map { $0.toDomain() }
     }
 
     // MARK: - Running Low Settings API
@@ -600,6 +727,26 @@ struct UserDTO: Codable {
     }
 }
 
+struct PaginatedResponseDTO<T: Codable>: Codable {
+    let data: [T]
+    let currentPage: Int
+    let totalPages: Int
+    let totalItems: Int
+    let pageSize: Int
+    let hasNext: Bool
+    let hasPrevious: Bool
+}
+
+struct PaginatedResult<T> {
+    let items: [T]
+    let currentPage: Int
+    let totalPages: Int
+    let totalItems: Int
+    let pageSize: Int
+    let hasNext: Bool
+    let hasPrevious: Bool
+}
+
 // MARK: - Storage Member DTO
 
 struct StorageMemberDTO: Codable {
@@ -625,6 +772,17 @@ struct PendingInviteInfo: Identifiable {
     let invitedBy: String
 }
 
+struct RunningLowNotification: Identifiable, Hashable {
+    var id: String {
+        "\(storage.serverId ?? -1)-\(product.serverId ?? -1)"
+    }
+
+    let storage: Storage
+    let product: Product
+    let runningLowAt: Int
+    let amount: Int
+}
+
 struct ProductDTO: Codable {
     let id: Int
     let ownerId: Int?
@@ -640,6 +798,7 @@ struct ProductDTO: Codable {
 
 struct StorageItemDTO: Codable {
     let id: Int
+    let storage: StorageDTO?
     let product: ProductDTO?
     let expiresAt: String?
     let createdAt: String
@@ -669,7 +828,7 @@ struct StorageItemDTO: Codable {
             createdAtDate = isoFormatter.date(from: createdAt) ?? Date()
         }
 
-        return StorageItem(product: product?.toDomain(), expiresAt: expiresAtDate, createdAt: createdAtDate, serverId: id)
+        return StorageItem(storage: storage?.toDomain(), product: product?.toDomain(), expiresAt: expiresAtDate, createdAt: createdAtDate, serverId: id)
     }
 }
 
@@ -691,5 +850,21 @@ struct RunningLowSettingDTO: Codable {
 
     func toDomain() -> RunningLowSetting {
         RunningLowSetting(productId: product.id, productName: product.name, threshold: runningLow, serverId: id)
+    }
+}
+
+struct RunningLowNotificationDTO: Codable {
+    let storage: StorageDTO
+    let product: ProductDTO
+    let runningLowAt: Int
+    let amount: Int
+
+    func toDomain() -> RunningLowNotification {
+        RunningLowNotification(
+            storage: storage.toDomain(),
+            product: product.toDomain(),
+            runningLowAt: runningLowAt,
+            amount: amount
+        )
     }
 }
