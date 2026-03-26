@@ -1,146 +1,55 @@
 # Services Documentation
 
+## Overview
+
+The iOS app currently has three core services:
+
+- `APIService.swift` - backend HTTP client + DTO mapping
+- `AuthService.swift` - auth/session token handling
+- `LocalNotificationService.swift` - local iOS notification scheduling
+
 ## APIService
 
-The `APIService` provides direct HTTP communication with the Shelf Life backend API.
+`APIService` wraps ShelfLife backend endpoints and exposes async methods used by contexts.
 
-### Configuration
+Current coverage includes:
 
-```swift
-import SwiftUI
-import SwiftData
+- storages (with search/pagination support)
+- products (with search/pagination support)
+- storage items
+- storage members + invites
+- shopping list (per-storage and aggregated)
+- running-low settings + running-low notifications
+- expired/about-to-expire notifications
+- image endpoints (`/icon/small`, `/pfp/small`)
 
+### Important behavior
 
-@main
-struct shelfappApp: App {
-    var body: some Scene {
-        WindowGroup {
-            ContentView()
-        }
-        .onAppear {
-            // Configure the API service (set baseURL and optional auth token)
-            APIService.shared.configure(
-                baseURL: "http://localhost:8080",
-                token: nil // Add your auth token here if available
-            )
-        }
-    }
-}
-```
+- Uses bearer token when available
+- Supports both paged and unpaged list loading
+- Maps DTO models to domain structs used by views/contexts
 
-### Available Methods
+## AuthService
 
-#### Storage Operations
-- `fetchStorages()` - Get all storages
-- `fetchStorage(id:)` - Get a specific storage
-- `createStorage(name:)` - Create a new storage
-- `updateStorageName(id:name:)` - Update storage name
-- `deleteStorage(id:)` - Delete a storage
+`AuthService` is responsible for:
 
-#### Product Operations
-- `fetchProducts()` - Get all products
-- `createProduct(name:category:expirationDaysDelta:)` - Create a product
+- login (`/api/auth/login`)
+- signup (`/api/auth/signup`)
+- fetch current user (`/api/auth/me`)
+- logout (`/api/auth/logout`)
+- secure token storage (Keychain)
 
-#### Storage Item Operations
-- `fetchStorageItems(storageId:)` - Get items in a storage
-- `addStorageItem(storageId:productId:expiresAt:)` - Add item to storage
-- `deleteStorageItem(storageId:itemId:)` - Remove item from storage
+It exposes `AuthError` for UI-friendly validation and auth failure handling.
 
-#### Shopping List Operations
-- `fetchShoppingItems(storageId:)` - Get shopping list items
-- `addShoppingItem(storageId:productId:amountToBuy:)` - Add shopping item
-- `deleteShoppingItem(storageId:itemId:)` - Remove shopping item
+## LocalNotificationService
 
-### Usage Example
+`LocalNotificationService` encapsulates local iOS notifications used by the app to surface important events in native notification center.
 
-```swift
-// Fetch storages from API
-let storages = try await APIService.shared.fetchStorages()
+## Error handling
 
-// Create a new storage
-let newStorage = try await APIService.shared.createStorage(name: "Pantry")
+Network/service errors propagate as `APIError` / `AuthError` and are handled in contexts/views with user-facing messages.
 
-// Add product to storage
-let item = try await APIService.shared.addStorageItem(
-    storageId: storageId,
-    productId: productId,
-    expiresAt: Date().addingTimeInterval(7 * 24 * 3600)
-)
-```
+## Notes
 
-## SyncService
-
-The `SyncService` handles syncing between the API and SwiftData local persistence. It provides high-level operations that keep both layers in sync.
-
-### Available Methods
-
-#### Sync Operations
-- `syncStorages(in:)` - Download all storages from API to local SwiftData
-- `syncStorageItems(for:in:)` - Download items for a specific storage
-
-#### Create (with automatic sync)
-- `createStorageAndSync(name:in:)` - Create storage on API and save locally
-- `addProductAndSync(name:category:expirationDaysDelta:in:)` - Create product and sync
-- `addStorageItemAndSync(to:product:expiresAt:in:)` - Add item and sync
-- `addShoppingItemAndSync(to:product:amountToBuy:in:)` - Add shopping item and sync
-
-#### Delete (with automatic sync)
-- `deleteStorageAndSync(_:in:)` - Delete storage from API and local
-- `deleteStorageItemAndSync(_:from:in:)` - Delete item from API and local
-- `deleteShoppingItemAndSync(_:from:in:)` - Delete shopping item from API and local
-
-### Usage Example
-
-```swift
-@Environment(\.modelContext) var modelContext
-
-// Sync all storages from backend
-try await SyncService.shared.syncStorages(in: modelContext)
-
-// Create a storage (automatically syncs with backend)
-let newStorage = try await SyncService.shared.createStorageAndSync(
-    name: "Fridge",
-    in: modelContext
-)
-
-// Add item to storage (automatically syncs)
-let item = try await SyncService.shared.addStorageItemAndSync(
-    to: storage,
-    product: product,
-    expiresAt: Date().addingTimeInterval(7 * 24 * 3600),
-    in: modelContext
-)
-```
-
-## Error Handling
-
-All async methods throw `APIError` which conforms to `LocalizedError`:
-
-```swift
-do {
-    let storages = try await APIService.shared.fetchStorages()
-} catch let error as APIError {
-    print(error.errorDescription ?? "Unknown error")
-} catch {
-    print("Unexpected error: \(error)")
-}
-```
-
-### Error Types
-- `.invalidURL` - Malformed URL
-- `.networkError(Error)` - Network connectivity issue
-- `.invalidResponse` - Invalid HTTP response
-- `.decodingError(Error)` - JSON decoding failed
-- `.unauthorized` - 401 Unauthorized
-- `.notFound` - 404 Not Found
-- `.serverError(statusCode:)` - 5xx server error
-- `.unknown` - Unknown error
-
-## Architecture Notes
-
-- **APIService**: Stateless, handles raw HTTP communication and DTO transformation
-- **SyncService**: Uses APIService internally, manages SwiftData context operations
-- **DTOs**: Data Transfer Objects (StorageDTO, ProductDTO, etc.) handle API serialization
-- **Models**: SwiftData @Model classes represent local domain entities
-
-Start with `DataService` for seeding/testing, use `APIService` for direct API calls, and use `SyncService` for keeping local data in sync with the backend.
+- Service methods are consumed from `Contexts/` to keep views thin.
+- When backend endpoint contracts change, update `APIService` DTOs first, then context/view logic.
