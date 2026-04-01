@@ -111,15 +111,3 @@ final class ImageCache: @unchecked Sendable {
         cache.setObject(image, forKey: url as NSURL)
     }
 }
-
-// MARK: - URL Helpers
-
-extension APIService {
-    func productIconURL(productId: Int) -> URL? {
-        normalizeURL("api/products/\(productId)/icon/small")
-    }
-
-    func userPfpURL(userId: Int) -> URL? {
-        normalizeURL("api/users/\(userId)/pfp/small")
-    }
-}

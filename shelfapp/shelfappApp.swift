@@ -33,7 +33,7 @@ struct shelfappApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView()
+            RootPage()
                 .preferredColorScheme(darkModeEnabled ? .dark : .light)
         }
     }
