@@ -10,11 +10,15 @@ class NotificationsStore {
     var isLoading = false
     var errorMessage: String?
 
-    private let apiHelper = APIHelper.shared
+    private let api: NotificationsAPI
+
+    init(api: NotificationsAPI = DefaultNotificationsAPI()) {
+        self.api = api
+    }
 
     func fetchInvites() async {
         do {
-            invites = try await apiHelper.fetchPendingInvites()
+            invites = try await api.fetchPendingInvites()
         } catch {
             errorMessage = "Failed to fetch invites: \(error.localizedDescription)"
         }
@@ -26,9 +30,9 @@ class NotificationsStore {
         defer { isLoading = false }
 
         do {
-            async let invitesFetch = apiHelper.fetchPendingInvites()
-            async let runningLowFetch = apiHelper.fetchAggregatedRunningLowNotifications()
-            async let aboutToExpireFetch = apiHelper.fetchAggregatedAboutToExpireItems()
+            async let invitesFetch = api.fetchPendingInvites()
+            async let runningLowFetch = api.fetchAggregatedRunningLowNotifications()
+            async let aboutToExpireFetch = api.fetchAggregatedAboutToExpireItems()
 
             invites = try await invitesFetch
             runningLowItems = try await runningLowFetch
@@ -50,7 +54,7 @@ class NotificationsStore {
         errorMessage = nil
 
         do {
-            try await apiHelper.acceptInvite(inviteId: invite.id)
+            try await api.acceptInvite(inviteId: invite.id)
             invites.removeAll { $0.id == invite.id }
             await storageContext.fetch()
         } catch {
@@ -62,7 +66,7 @@ class NotificationsStore {
         errorMessage = nil
 
         do {
-            try await apiHelper.declineInvite(inviteId: invite.id)
+            try await api.declineInvite(inviteId: invite.id)
             invites.removeAll { $0.id == invite.id }
         } catch {
             errorMessage = "Failed to decline invite: \(error.localizedDescription)"
@@ -73,9 +77,9 @@ class NotificationsStore {
         errorMessage = nil
 
         do {
-            _ = try await apiHelper.addShoppingItem(storageId: storageId, productId: productId, amountToBuy: 1)
+            _ = try await api.addShoppingItem(storageId: storageId, productId: productId, amountToBuy: 1)
             await shoppingListContext.fetchAggregated()
-            runningLowItems = try await apiHelper.fetchAggregatedRunningLowNotifications()
+            runningLowItems = try await api.fetchAggregatedRunningLowNotifications()
         } catch {
             errorMessage = "Failed to add running low item to shopping list: \(error.localizedDescription)"
         }
@@ -89,8 +93,8 @@ class NotificationsStore {
                 throw APIError.invalidURL
             }
 
-            try await apiHelper.deleteStorageItem(storageId: storageId, itemId: itemId)
-            aboutToExpireItems = try await apiHelper.fetchAggregatedAboutToExpireItems()
+            try await api.deleteStorageItem(storageId: storageId, itemId: itemId)
+            aboutToExpireItems = try await api.fetchAggregatedAboutToExpireItems()
         } catch {
             errorMessage = "Failed to delete item: \(error.localizedDescription)"
         }

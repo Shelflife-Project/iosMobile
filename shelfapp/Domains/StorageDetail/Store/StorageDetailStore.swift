@@ -9,7 +9,11 @@ class StorageDetailStore {
     var isLoadingItems = false
     var errorMessage: String?
 
-    private let apiHelper = APIHelper.shared
+    private let api: StorageDetailAPI
+
+    init(api: StorageDetailAPI = DefaultStorageDetailAPI()) {
+        self.api = api
+    }
 
     var acceptedMembers: [StorageMemberInfo] {
         members.filter { $0.accepted }
@@ -23,7 +27,7 @@ class StorageDetailStore {
         guard let storageId = storage.serverId else { return }
 
         do {
-            let remoteStorage = try await apiHelper.fetchStorage(id: storageId)
+            let remoteStorage = try await api.fetchStorage(id: storageId)
             storage.name = remoteStorage.name
             storage.owner = remoteStorage.owner
             await loadItems(for: storage)
@@ -39,9 +43,9 @@ class StorageDetailStore {
         defer { isLoadingItems = false }
 
         do {
-            async let itemsFetch = apiHelper.fetchStorageItems(storageId: storageId)
-            async let shoppingFetch = apiHelper.fetchShoppingItems(storageId: storageId)
-            async let runningLowFetch = apiHelper.fetchRunningLowSettings(storageId: storageId)
+            async let itemsFetch = api.fetchStorageItems(storageId: storageId)
+            async let shoppingFetch = api.fetchShoppingItems(storageId: storageId)
+            async let runningLowFetch = api.fetchRunningLowSettings(storageId: storageId)
             storage.items = try await itemsFetch
             storage.shoppingItems = try await shoppingFetch
             storage.runningLowSettings = try await runningLowFetch
@@ -62,7 +66,7 @@ class StorageDetailStore {
         defer { isLoadingMembers = false }
 
         do {
-            let fetched = try await apiHelper.fetchMembers(storageId: storageServerId)
+            let fetched = try await api.fetchMembers(storageId: storageServerId)
             members = fetched
             seedOwnerAsMemberIfNeeded(storage)
         } catch {
@@ -79,7 +83,7 @@ class StorageDetailStore {
                 throw APIError.invalidURL
             }
 
-            let remoteItem = try await apiHelper.addStorageItem(
+            let remoteItem = try await api.addStorageItem(
                 storageId: storageId,
                 productId: productId,
                 expiresAt: expiresAt
@@ -96,7 +100,7 @@ class StorageDetailStore {
         guard let storageServerId = storage.serverId else { return }
 
         do {
-            try await apiHelper.removeMember(storageId: storageServerId, userId: member.userId)
+            try await api.removeMember(storageId: storageServerId, userId: member.userId)
             members.removeAll { $0.id == member.id }
         } catch {
             errorMessage = "Failed to remove member: \(error.localizedDescription)"
@@ -107,7 +111,7 @@ class StorageDetailStore {
         guard let storageServerId = storage.serverId else { return }
 
         do {
-            let invited = try await apiHelper.inviteMember(storageId: storageServerId, email: email)
+            let invited = try await api.inviteMember(storageId: storageServerId, email: email)
             members.append(invited)
         } catch {
             errorMessage = "Failed to invite member: \(error.localizedDescription)"
@@ -118,7 +122,7 @@ class StorageDetailStore {
         guard let storageServerId = storage.serverId else { return }
 
         do {
-            try await apiHelper.removeMember(storageId: storageServerId, userId: invite.userId)
+            try await api.removeMember(storageId: storageServerId, userId: invite.userId)
             members.removeAll { $0.id == invite.id }
         } catch {
             errorMessage = "Failed to cancel invitation: \(error.localizedDescription)"
@@ -130,7 +134,7 @@ class StorageDetailStore {
             let item = storage.items[index]
             do {
                 if let storageId = storage.serverId, let itemId = item.serverId {
-                    try await apiHelper.deleteStorageItem(storageId: storageId, itemId: itemId)
+                    try await api.deleteStorageItem(storageId: storageId, itemId: itemId)
                 }
             } catch {
                 errorMessage = "Failed to delete item: \(error.localizedDescription)"
@@ -142,7 +146,7 @@ class StorageDetailStore {
     func deleteItem(_ item: StorageItem, from storage: Storage) async {
         do {
             if let storageId = storage.serverId, let itemId = item.serverId {
-                try await apiHelper.deleteStorageItem(storageId: storageId, itemId: itemId)
+                try await api.deleteStorageItem(storageId: storageId, itemId: itemId)
             }
             await loadItems(for: storage)
         } catch {
@@ -155,7 +159,7 @@ class StorageDetailStore {
             let item = storage.shoppingItems[index]
             do {
                 if let storageId = storage.serverId, let itemId = item.serverId {
-                    try await apiHelper.deleteShoppingItem(storageId: storageId, itemId: itemId)
+                    try await api.deleteShoppingItem(storageId: storageId, itemId: itemId)
                 }
             } catch {
                 errorMessage = "Failed to delete shopping item: \(error.localizedDescription)"
@@ -170,7 +174,7 @@ class StorageDetailStore {
         guard let storageId = storage.serverId, let productId = product.serverId else { return }
         errorMessage = nil
         do {
-            _ = try await apiHelper.addShoppingItem(storageId: storageId, productId: productId, amountToBuy: amount)
+            _ = try await api.addShoppingItem(storageId: storageId, productId: productId, amountToBuy: amount)
             await loadItems(for: storage)
 
             if pushNotificationsEnabled {
@@ -191,7 +195,7 @@ class StorageDetailStore {
               let itemId = item.serverId else { return }
         errorMessage = nil
         do {
-            try await apiHelper.deleteShoppingItem(storageId: storageId, itemId: itemId)
+            try await api.deleteShoppingItem(storageId: storageId, itemId: itemId)
             await loadItems(for: storage)
         } catch {
             errorMessage = "Failed to remove from shopping list: \(error.localizedDescription)"
@@ -202,7 +206,7 @@ class StorageDetailStore {
         guard let storageId = storage.serverId, let itemId = item.serverId else { return }
         errorMessage = nil
         do {
-            _ = try await apiHelper.updateShoppingItemAmount(storageId: storageId, itemId: itemId, amountToBuy: amountToBuy)
+            _ = try await api.updateShoppingItemAmount(storageId: storageId, itemId: itemId, amountToBuy: amountToBuy)
             await loadItems(for: storage)
         } catch {
             errorMessage = "Failed to update shopping item amount: \(error.localizedDescription)"
@@ -215,7 +219,7 @@ class StorageDetailStore {
         errorMessage = nil
 
         do {
-            try await apiHelper.completeShoppingItem(storageId: storageId, itemId: itemId)
+            try await api.completeShoppingItem(storageId: storageId, itemId: itemId)
             await loadItems(for: storage)
         } catch {
             errorMessage = "Failed to complete shopping item: \(error.localizedDescription)"
@@ -235,12 +239,13 @@ class StorageDetailStore {
         do {
             if let existing = storage.runningLowSettings.first(where: { $0.productId == productId }),
                let settingId = existing.serverId {
-                let updated = try await apiHelper.updateRunningLowSetting(storageId: storageId, settingId: settingId, threshold: threshold)
+                let updated = try await api.updateRunningLowSetting(storageId: storageId, settingId: settingId, threshold: threshold)
+                
                 if let idx = storage.runningLowSettings.firstIndex(where: { $0.serverId == settingId }) {
                     storage.runningLowSettings[idx] = updated
                 }
             } else {
-                let created = try await apiHelper.createRunningLowSetting(storageId: storageId, productId: productId, threshold: threshold)
+                let created = try await api.createRunningLowSetting(storageId: storageId, productId: productId, threshold: threshold)
                 storage.runningLowSettings.append(created)
             }
         } catch {
@@ -254,7 +259,7 @@ class StorageDetailStore {
               let settingId = setting.serverId else { return }
         errorMessage = nil
         do {
-            try await apiHelper.deleteRunningLowSetting(storageId: storageId, settingId: settingId)
+            try await api.deleteRunningLowSetting(storageId: storageId, settingId: settingId)
             storage.runningLowSettings.removeAll { $0.serverId == settingId }
         } catch {
             errorMessage = "Failed to remove running low setting: \(error.localizedDescription)"

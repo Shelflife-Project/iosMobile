@@ -8,7 +8,7 @@ struct PendingInviteRow: View {
         HStack(spacing: 12) {
             ZStack(alignment: .bottomTrailing) {
                 RemoteImage(
-                    url: APIHelper.shared.userProfilePictureURL(userId: invite.userId),
+                    url: ResourceURLBuilder.userProfilePictureURL(userId: invite.userId),
                     placeholder: "person.circle.fill",
                     size: 36
                 )

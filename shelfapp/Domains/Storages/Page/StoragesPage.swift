@@ -12,8 +12,24 @@ final class StoragesPageViewModel {
     var animateShared = true
     var animateSettings = true
     var searchText = ""
+    var debouncedSearchText = ""
     var pageSize = 0
     let pageSizeOptions = [0, 5, 10, 15, 20]
+    private var searchDebounceTask: Task<Void, Never>?
+
+    func setSearchText(_ text: String) {
+        searchText = text
+        searchDebounceTask?.cancel()
+        searchDebounceTask = Task {
+            do {
+                try await Task.sleep(nanoseconds: 300_000_000) // 300ms debounce
+                guard !Task.isCancelled else { return }
+                debouncedSearchText = text
+            } catch {
+                return
+            }
+        }
+    }
 
     func triggerAnimations() {
         animateBox = true
@@ -65,48 +81,51 @@ struct StoragesPage: View {
     }
 
     var body: some View {
-        Group {
-            if storageContext.storages.isEmpty {
-                VStack(spacing: 16) {
-                    Image(systemName: "shippingbox")
-                        .font(.system(size: 48))
-                        .foregroundStyle(.gray)
-                        .symbolEffect(.wiggle, isActive: viewModel.animateBox)
-                    Text("No Storages")
-                        .font(.headline)
-                    Text("Create your first storage to get started")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Button(action: { viewModel.showCreateForm = true }) {
-                        Label("Create Storage", systemImage: "plus.circle.fill")
-                            .fontWeight(.semibold)
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-            } else {
-                List {
-                    Section {
-                        HStack(spacing: 10) {
-                            TextField("Search storages...", text: Binding(
-                                get: { viewModel.searchText },
-                                set: { viewModel.searchText = $0 }
-                            ))
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
+        NavigationStack {
+            List {
+                Section {
+                    HStack(spacing: 10) {
+                        TextField("Search storages...", text: Binding(
+                            get: { viewModel.searchText },
+                            set: { viewModel.setSearchText($0) }
+                        ))
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
 
-                            Button {
-                                viewModel.showPaginationSettings = true
-                            } label: {
-                                Image(systemName: "gearshape.fill")
-                                    .font(.title3)
-                                    .symbolEffect(.pulse, isActive: viewModel.animateSettings)
-                            }
-                            .buttonStyle(.bordered)
-                            .accessibilityLabel("Pagination settings")
+                        Button {
+                            viewModel.showPaginationSettings = true
+                        } label: {
+                            Image(systemName: "gearshape.fill")
+                                .font(.title3)
+                                .symbolEffect(.pulse, isActive: viewModel.animateSettings)
                         }
+                        .buttonStyle(.bordered)
+                        .accessibilityLabel("Pagination settings")
                     }
+                }
 
+                if storageContext.storages.isEmpty {
+                    Section {
+                        VStack(spacing: 16) {
+                            Image(systemName: "shippingbox")
+                                .font(.system(size: 48))
+                                .foregroundStyle(.gray)
+                                .symbolEffect(.wiggle, isActive: viewModel.animateBox)
+                            Text("No Storages")
+                                .font(.headline)
+                            Text("Create your first storage to get started")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Button(action: { viewModel.showCreateForm = true }) {
+                                Label("Create Storage", systemImage: "plus.circle.fill")
+                                    .fontWeight(.semibold)
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.vertical, 8)
+                    }
+                } else {
                     if !ownedStorages.isEmpty {
                         Section {
                             ForEach(ownedStorages) { storage in
@@ -174,128 +193,131 @@ struct StoragesPage: View {
                         }
                     }
                 }
-                .scrollContentBackground(.hidden)
-                .shadow(radius: 4, x: 3, y: 3)
             }
-        }
-        .navigationTitle("Storages")
-        .appGradientBackground()
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button(action: { viewModel.showCreateForm = true }) {
-                    Image(systemName: "plus")
+            .scrollContentBackground(.hidden)
+            .shadow(radius: 4, x: 3, y: 3)
+            .navigationTitle("Storages")
+            .appGradientBackground()
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button(action: { viewModel.showCreateForm = true }) {
+                        Image(systemName: "plus")
+                    }
                 }
             }
-        }
-        .sheet(isPresented: Binding(
-            get: { viewModel.showCreateForm },
-            set: { viewModel.showCreateForm = $0 }
-        )) {
-            CreateStorageSheet(
-                isPresented: Binding(
-                    get: { viewModel.showCreateForm },
-                    set: { viewModel.showCreateForm = $0 }
-                ),
-                onSave: createStorage
-            )
-        }
-        .sheet(isPresented: Binding(
-            get: { viewModel.showEditForm },
-            set: { viewModel.showEditForm = $0 }
-        )) {
-            if let storage = viewModel.editingStorage {
-                EditStorageSheet(
-                    storage: storage,
+            .sheet(isPresented: Binding(
+                get: { viewModel.showCreateForm },
+                set: { viewModel.showCreateForm = $0 }
+            )) {
+                CreateStorageSheet(
                     isPresented: Binding(
-                        get: { viewModel.showEditForm },
-                        set: { viewModel.showEditForm = $0 }
+                        get: { viewModel.showCreateForm },
+                        set: { viewModel.showCreateForm = $0 }
                     ),
-                    onSave: saveStorageEdits
+                    onSave: createStorage
                 )
             }
-        }
-        .sheet(isPresented: Binding(
-            get: { viewModel.showPaginationSettings },
-            set: { viewModel.showPaginationSettings = $0 }
-        )) {
-            NavigationStack {
-                Form {
-                    Picker("Page size", selection: Binding(
-                        get: { viewModel.pageSize },
-                        set: { viewModel.pageSize = $0 }
-                    )) {
-                        ForEach(viewModel.pageSizeOptions, id: \.self) { size in
-                            Text(viewModel.pageSizeLabel(size)).tag(size)
-                        }
-                    }
-
-                    HStack {
-                        Button {
-                            Task { await storageContext.previousPage() }
-                        } label: {
-                            Label("Previous", systemImage: "chevron.left")
-                        }
-                        .buttonStyle(.bordered)
-                        .disabled(!storageContext.hasPrevious || storageContext.isLoading || viewModel.pageSize == 0)
-
-                        Spacer()
-                        Text("Page \(storageContext.currentPage + 1)")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Spacer()
-
-                        Button {
-                            Task { await storageContext.nextPage() }
-                        } label: {
-                            Label("Next", systemImage: "chevron.right")
-                        }
-                        .buttonStyle(.bordered)
-                        .disabled(!storageContext.hasNext || storageContext.isLoading || viewModel.pageSize == 0)
-                    }
-                }
-                .navigationTitle("List Settings")
-                .toolbar {
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Done") {
-                            viewModel.showPaginationSettings = false
-                        }
-                    }
+            .sheet(isPresented: Binding(
+                get: { viewModel.showEditForm },
+                set: { viewModel.showEditForm = $0 }
+            )) {
+                if let storage = viewModel.editingStorage {
+                    EditStorageSheet(
+                        storage: storage,
+                        isPresented: Binding(
+                            get: { viewModel.showEditForm },
+                            set: { viewModel.showEditForm = $0 }
+                        ),
+                        onSave: saveStorageEdits
+                    )
                 }
             }
-        }
-        .alert("Error", isPresented: Binding(
-            get: { storageContext.errorMessage != nil },
-            set: { isPresented in
-                if !isPresented {
-                    storageContext.errorMessage = nil
+            .sheet(isPresented: Binding(
+                get: { viewModel.showPaginationSettings },
+                set: { viewModel.showPaginationSettings = $0 }
+            )) {
+                NavigationStack {
+                    Form {
+                        Picker("Page size", selection: Binding(
+                            get: { viewModel.pageSize },
+                            set: { viewModel.pageSize = $0 }
+                        )) {
+                            ForEach(viewModel.pageSizeOptions, id: \.self) { size in
+                                Text(viewModel.pageSizeLabel(size)).tag(size)
+                            }
+                        }
+
+                        HStack {
+                            Button {
+                                Task { await storageContext.previousPage() }
+                            } label: {
+                                Label("Previous", systemImage: "chevron.left")
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(!storageContext.hasPrevious || storageContext.isLoading || viewModel.pageSize == 0)
+
+                            Spacer()
+                            Text("Page \(storageContext.currentPage + 1)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Spacer()
+
+                            Button {
+                                Task { await storageContext.nextPage() }
+                            } label: {
+                                Label("Next", systemImage: "chevron.right")
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(!storageContext.hasNext || storageContext.isLoading || viewModel.pageSize == 0)
+                        }
+                    }
+                    .navigationTitle("List Settings")
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") {
+                                viewModel.showPaginationSettings = false
+                            }
+                        }
+                    }
                 }
             }
-        )) {
-            Button("OK") { storageContext.errorMessage = nil }
-        } message: {
-            Text(storageContext.errorMessage ?? "An unknown error occurred")
-        }
-        .onAppear {
-            viewModel.triggerAnimations()
-            viewModel.searchText = storageContext.searchText
-            viewModel.pageSize = storageContext.pageSize
-            Task {
-                await storageContext.fetch(search: viewModel.searchText, page: 0, size: viewModel.pageSize)
+            .alert("Error", isPresented: Binding(
+                get: { storageContext.errorMessage != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        storageContext.errorMessage = nil
+                    }
+                }
+            )) {
+                Button("OK") { storageContext.errorMessage = nil }
+            } message: {
+                Text(storageContext.errorMessage ?? "An unknown error occurred")
             }
-        }
-        .onChange(of: viewModel.searchText) { _, search in
-            Task {
-                await storageContext.fetch(search: search, page: 0)
+            .onAppear {
+                viewModel.triggerAnimations()
+                viewModel.searchText = storageContext.searchText
+                viewModel.pageSize = storageContext.pageSize
+                Task {
+                    await storageContext.fetch(search: viewModel.searchText, page: 0, size: viewModel.pageSize)
+                }
             }
-        }
-        .onChange(of: viewModel.pageSize) { _, pageSize in
-            Task {
-                await storageContext.fetch(page: 0, size: pageSize)
+            .onChange(of: viewModel.debouncedSearchText) { _, search in
+                Task {
+                    await storageContext.fetch(search: search, page: 0)
+                }
+            }
+            .onChange(of: viewModel.pageSize) { _, pageSize in
+                Task {
+                    await storageContext.fetch(page: 0, size: pageSize)
+                }
             }
         }
     }
 
-    private func createStorage(name: String) {
+}
+
+private extension StoragesPage {
+    func createStorage(name: String) {
         Task {
             await storageContext.add(
                 name: name,
@@ -304,23 +326,23 @@ struct StoragesPage: View {
         }
     }
 
-    private func deleteStorage(_ storage: Storage) {
+    func deleteStorage(_ storage: Storage) {
         Task {
             await storageContext.delete(storage)
         }
     }
 
-    private func leaveStorage(_ storage: Storage) {
+    func leaveStorage(_ storage: Storage) {
         Task {
             await storageContext.leave(storage)
         }
     }
 
-    private func canEditStorage(_ storage: Storage) -> Bool {
+    func canEditStorage(_ storage: Storage) -> Bool {
         isAdmin || storage.owner?.username == currentUsername
     }
 
-    private func saveStorageEdits(name: String) {
+    func saveStorageEdits(name: String) {
         guard let storage = viewModel.editingStorage else { return }
         Task {
             await storageContext.updateName(storage, name: name)

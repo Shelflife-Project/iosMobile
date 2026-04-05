@@ -19,25 +19,18 @@ func computeNotificationsBadgeCount(
 }
 
 struct RootPage: View {
-    @State private var authStore = AuthStore()
+    @Environment(AppEnvironment.self) private var environment
     @State private var selectedTab: TabItem = .home
     @State private var isBootstrappingData = false
     @State private var hasBootstrappedData = false
-    @State private var notificationsStore = NotificationsStore()
-    @State private var shoppingListStore = ShoppingListStore()
-    @State private var profileStore = ProfileStore()
-    @State private var productsStore = ProductsStore()
-    @State private var storageDetailStore = StorageDetailStore()
-
-    @State private var storageStore = StorageStore()
 
     init() {}
 
     private var notificationsBadgeCount: Int {
         computeNotificationsBadgeCount(
-            invites: notificationsStore.invites,
-            runningLowItems: notificationsStore.runningLowItems,
-            shoppingItems: shoppingListStore.items
+            invites: environment.notifications.invites,
+            runningLowItems: environment.notifications.runningLowItems,
+            shoppingItems: environment.shoppingList.items
         )
     }
 
@@ -61,50 +54,25 @@ struct RootPage: View {
 
     var body: some View {
         Group {
-            if !authStore.hasCheckedSession && authStore.token != nil {
+            if !environment.auth.hasCheckedSession && environment.auth.token != nil {
                 ProgressView("Loading...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .appGradientBackground()
-            } else if authStore.isLoggedIn && (!hasBootstrappedData || isBootstrappingData) {
+            } else if environment.auth.isLoggedIn && (!hasBootstrappedData || isBootstrappingData) {
                 ProgressView("Loading your data...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .appGradientBackground()
-            } else if authStore.isLoggedIn {
-            TabView(selection: $selectedTab) {
-                HomePage()
-                    .tabItem {
-                        Label(TabItem.home.rawValue, systemImage: TabItem.home.icon)
-                    }
-                    .tag(TabItem.home)
-                NotificationsPage()
-                    .tabItem {
-                        Label(TabItem.notifications.rawValue, systemImage: TabItem.notifications.icon)
-                    }
-                    .badge(notificationsBadgeCount == 0 ? nil : "\(notificationsBadgeCount)")
-                    .tag(TabItem.notifications)
-
-                ProfilePage()
-                    .tabItem {
-                        Label(TabItem.profile.rawValue, systemImage: TabItem.profile.icon)
-                    }
-                    .tag(TabItem.profile)
-            }
-            .environment(storageStore)
-            .environment(notificationsStore)
-            .environment(shoppingListStore)
-            .environment(profileStore)
-            .environment(productsStore)
-            .environment(storageDetailStore)
-            .environment(authStore)
+            } else if environment.auth.isLoggedIn {
+                tabContent
             } else {
                 AuthPage()
-                    .environment(authStore)
+                    .environment(environment.auth)
             }
         }
         .task {
             await bootstrap()
         }
-        .onChange(of: authStore.isLoggedIn) { _, isLoggedIn in
+        .onChange(of: environment.auth.isLoggedIn) { _, isLoggedIn in
             if !isLoggedIn {
                 clearStores()
                 hasBootstrappedData = false
@@ -117,15 +85,48 @@ struct RootPage: View {
             }
         }
     }
+}
 
-    private func bootstrap(force: Bool = false) async {
-        if authStore.token != nil && !authStore.hasCheckedSession {
-            _ = await authStore.me()
+private extension RootPage {
+    var tabContent: some View {
+        TabView(selection: $selectedTab) {
+            HomePage()
+                .tabItem {
+                    Label(TabItem.home.rawValue, systemImage: TabItem.home.icon)
+                }
+                .tag(TabItem.home)
+            NotificationsPage()
+                .tabItem {
+                    Label(TabItem.notifications.rawValue, systemImage: TabItem.notifications.icon)
+                }
+                .badge(notificationsBadgeCount == 0 ? nil : "\(notificationsBadgeCount)")
+                .tag(TabItem.notifications)
+
+            ProfilePage()
+                .tabItem {
+                    Label(TabItem.profile.rawValue, systemImage: TabItem.profile.icon)
+                }
+                .tag(TabItem.profile)
+        }
+        .environment(environment.storages)
+        .environment(environment.notifications)
+        .environment(environment.shoppingList)
+        .environment(environment.profile)
+        .environment(environment.products)
+        .environment(environment.storageDetail)
+        .environment(environment.auth)
+    }
+}
+
+private extension RootPage {
+    func bootstrap(force: Bool = false) async {
+        if environment.auth.token != nil && !environment.auth.hasCheckedSession {
+            _ = await environment.auth.me()
         }
 
-        profileStore.sync(from: authStore)
+        environment.profile.sync(from: environment.auth)
 
-        guard authStore.isLoggedIn else { return }
+        guard environment.auth.isLoggedIn else { return }
 
         if hasBootstrappedData && !force { return }
 
@@ -135,28 +136,28 @@ struct RootPage: View {
             hasBootstrappedData = true
         }
 
-        await productsStore.fetch()
-        await storageStore.fetch()
-        await shoppingListStore.fetchAggregated()
-        await notificationsStore.fetchAll()
+        await environment.products.fetch()
+        await environment.storages.fetch()
+        await environment.shoppingList.fetchAggregated()
+        await environment.notifications.fetchAll()
     }
 
-    private func clearStores() {
-        storageStore.storages = []
-        storageStore.errorMessage = nil
+    func clearStores() {
+        environment.storages.storages = []
+        environment.storages.errorMessage = nil
 
-        productsStore.products = []
-        productsStore.errorMessage = nil
+        environment.products.products = []
+        environment.products.errorMessage = nil
 
-        shoppingListStore.items = []
-        shoppingListStore.errorMessage = nil
+        environment.shoppingList.items = []
+        environment.shoppingList.errorMessage = nil
 
-        notificationsStore.invites = []
-        notificationsStore.runningLowItems = []
-        notificationsStore.aboutToExpireItems = []
-        notificationsStore.errorMessage = nil
+        environment.notifications.invites = []
+        environment.notifications.runningLowItems = []
+        environment.notifications.aboutToExpireItems = []
+        environment.notifications.errorMessage = nil
 
-        storageDetailStore.members = []
-        storageDetailStore.errorMessage = nil
+        environment.storageDetail.members = []
+        environment.storageDetail.errorMessage = nil
     }
 }

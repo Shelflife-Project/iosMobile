@@ -20,10 +20,10 @@ class StorageStore {
     var hasNext = false
     var hasPrevious = false
 
-    private let apiService: APIHelper
+    private let api: StorageAPI
 
-    init(apiService: APIHelper = .shared) {
-        self.apiService = apiService
+    init(api: StorageAPI = DefaultStorageAPI(http: DefaultHTTPClient())) {
+        self.api = api
     }
 
     func fetch(search: String? = nil, page: Int? = nil, size: Int? = nil) async {
@@ -36,11 +36,7 @@ class StorageStore {
         if let size { pageSize = max(0, size) }
 
         do {
-            let result = try await apiService.fetchStoragesPage(
-                search: searchText,
-                size: pageSize,
-                page: currentPage
-            )
+            let result = try await api.fetchStorages(search: searchText, size: pageSize, page: currentPage)
             storages = result.items
             hasNext = result.hasNext
             hasPrevious = result.hasPrevious
@@ -69,7 +65,7 @@ class StorageStore {
         defer { isLoading = false }
 
         do {
-            let newStorage = try await apiService.createStorage(name: name)
+            let newStorage = try await api.createStorage(name: name)
             newStorage.owner = newStorage.owner ?? currentUser
             await fetch()
         } catch {
@@ -88,7 +84,7 @@ class StorageStore {
 
         do {
             guard let storageId = storage.serverId else { throw APIError.invalidURL }
-            _ = try await apiService.updateStorageName(id: storageId, name: name)
+            _ = try await api.updateStorageName(id: storageId, name: name)
             await fetch()
         } catch {
             errorMessage = "Failed to update storage: \(error.localizedDescription)"
@@ -102,7 +98,7 @@ class StorageStore {
 
         do {
             if let storageId = storage.serverId {
-                try await apiService.deleteStorage(id: storageId)
+                try await api.deleteStorage(id: storageId)
             }
             storages.removeAll { $0.id == storage.id }
             await fetch()

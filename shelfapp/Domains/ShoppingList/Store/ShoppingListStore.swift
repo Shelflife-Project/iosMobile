@@ -8,10 +8,10 @@ class ShoppingListStore {
     var isLoading = false
     var errorMessage: String?
 
-    private let apiService: APIHelper
+    private let api: ShoppingListAPI
 
-    init(apiService: APIHelper = .shared) {
-        self.apiService = apiService
+    init(api: ShoppingListAPI = DefaultShoppingListAPI()) {
+        self.api = api
     }
 
     func fetchAggregated() async {
@@ -20,7 +20,7 @@ class ShoppingListStore {
         defer { isLoading = false }
 
         do {
-            items = try await apiService.fetchAggregatedShoppingItems()
+            items = try await api.fetchAggregatedShoppingItems()
         } catch {
             errorMessage = "Failed to fetch shopping items: \(error.localizedDescription)"
             items = []
@@ -28,7 +28,7 @@ class ShoppingListStore {
     }
 
     private func refreshItemsDirect() async throws {
-        items = try await apiService.fetchAggregatedShoppingItems()
+        items = try await api.fetchAggregatedShoppingItems()
     }
 
     private func resolveStorageId(for item: ShoppingListItem) async throws -> Int {
@@ -40,7 +40,7 @@ class ShoppingListStore {
             throw APIError.invalidURL
         }
 
-        let latest = try await apiService.fetchAggregatedShoppingItems()
+        let latest = try await api.fetchAggregatedShoppingItems()
         items = latest
 
         if let refreshed = latest.first(where: { $0.serverId == itemId }),
@@ -52,7 +52,7 @@ class ShoppingListStore {
     }
 
     private func refreshedItem(for itemId: Int) async throws -> ShoppingListItem {
-        let latest = try await apiService.fetchAggregatedShoppingItems()
+        let latest = try await api.fetchAggregatedShoppingItems()
         items = latest
 
         guard let refreshed = latest.first(where: { $0.serverId == itemId }) else {
@@ -68,7 +68,7 @@ class ShoppingListStore {
         defer { isLoading = false }
 
         do {
-            items = try await apiService.fetchShoppingItems(storageId: storageId)
+            items = try await api.fetchShoppingItems(storageId: storageId)
         } catch {
             errorMessage = "Failed to fetch shopping items: \(error.localizedDescription)"
             items = []
@@ -85,7 +85,7 @@ class ShoppingListStore {
                 throw APIError.invalidURL
             }
 
-            let item = try await apiService.addShoppingItem(
+            let item = try await api.addShoppingItem(
                 storageId: storageId,
                 productId: productId,
                 amountToBuy: amountToBuy
@@ -109,11 +109,11 @@ class ShoppingListStore {
 
             do {
                 let storageId = try await resolveStorageId(for: item)
-                _ = try await apiService.updateShoppingItemAmount(storageId: storageId, itemId: itemId, amountToBuy: amountToBuy)
+                _ = try await api.updateShoppingItemAmount(storageId: storageId, itemId: itemId, amountToBuy: amountToBuy)
             } catch APIError.serverError(let statusCode) where statusCode == 403 {
                 let refreshed = try await refreshedItem(for: itemId)
                 let storageId = try await resolveStorageId(for: refreshed)
-                _ = try await apiService.updateShoppingItemAmount(storageId: storageId, itemId: itemId, amountToBuy: amountToBuy)
+                _ = try await api.updateShoppingItemAmount(storageId: storageId, itemId: itemId, amountToBuy: amountToBuy)
             }
 
             try await refreshItemsDirect()
@@ -134,7 +134,7 @@ class ShoppingListStore {
 
             do {
                 let storageId = try await resolveStorageId(for: item)
-                try await apiService.completeShoppingItem(storageId: storageId, itemId: itemId)
+                try await api.completeShoppingItem(storageId: storageId, itemId: itemId)
             } catch APIError.serverError(let statusCode) where statusCode == 403 {
                 let refreshed = try await refreshedItem(for: itemId)
                 let storageId = try await resolveStorageId(for: refreshed)
@@ -142,9 +142,9 @@ class ShoppingListStore {
                 if let productId = refreshed.product?.serverId {
                     let amount = max(1, refreshed.amountToBuy)
                     for _ in 0..<amount {
-                        _ = try await apiService.addStorageItem(storageId: storageId, productId: productId, expiresAt: nil)
+                        _ = try await api.addStorageItem(storageId: storageId, productId: productId, expiresAt: nil)
                     }
-                    try await apiService.deleteShoppingItem(storageId: storageId, itemId: itemId)
+                    try await api.deleteShoppingItem(storageId: storageId, itemId: itemId)
                 } else {
                     throw APIError.invalidURL
                 }
@@ -168,11 +168,11 @@ class ShoppingListStore {
 
             do {
                 let storageId = try await resolveStorageId(for: item)
-                try await apiService.deleteShoppingItem(storageId: storageId, itemId: itemId)
+                try await api.deleteShoppingItem(storageId: storageId, itemId: itemId)
             } catch APIError.serverError(let statusCode) where statusCode == 403 {
                 let refreshed = try await refreshedItem(for: itemId)
                 let storageId = try await resolveStorageId(for: refreshed)
-                try await apiService.deleteShoppingItem(storageId: storageId, itemId: itemId)
+                try await api.deleteShoppingItem(storageId: storageId, itemId: itemId)
             }
 
             try await refreshItemsDirect()

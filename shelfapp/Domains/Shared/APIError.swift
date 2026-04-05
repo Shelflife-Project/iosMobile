@@ -5,6 +5,7 @@ enum APIError: LocalizedError {
     case networkError(Error)
     case invalidResponse
     case decodingError(Error)
+    case forbidden
     case unauthorized
     case notFound
     case serverError(statusCode: Int)
@@ -20,6 +21,8 @@ enum APIError: LocalizedError {
             return "Invalid response from server"
         case .decodingError(let error):
             return "Failed to decode response: \(error.localizedDescription)"
+        case .forbidden:
+            return "Forbidden"
         case .unauthorized:
             return "Unauthorized - please log in"
         case .notFound:

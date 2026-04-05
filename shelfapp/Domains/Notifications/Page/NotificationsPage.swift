@@ -79,7 +79,7 @@ struct NotificationsPage: View {
 
                                     HStack(spacing: 12) {
                                         RemoteImage(
-                                            url: item.product?.serverId.flatMap { APIHelper.shared.productIconURL(productId: $0) },
+                                            url: item.product?.serverId.flatMap { ResourceURLBuilder.productIconURL(productId: $0) },
                                             placeholder: "clock.badge.exclamationmark",
                                             size: 40
                                         )
@@ -128,7 +128,7 @@ struct NotificationsPage: View {
                                     ForEach(unresolvedItems) { lowItem in
                                         HStack(spacing: 12) {
                                             RemoteImage(
-                                                url: APIHelper.shared.productIconURL(productId: lowItem.id),
+                                                url: ResourceURLBuilder.productIconURL(productId: lowItem.id),
                                                 placeholder: "cart",
                                                 size: 40
                                             )

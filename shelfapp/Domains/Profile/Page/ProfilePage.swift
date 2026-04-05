@@ -33,7 +33,7 @@ struct ProfilePage: View {
         guard let userId = profileContext.currentUser?.serverId else {
             return nil
         }
-        guard let baseURL = APIHelper.shared.userProfilePictureURL(userId: userId) else {
+        guard let baseURL = ResourceURLBuilder.userProfilePictureURL(userId: userId) else {
             return nil
         }
         var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)

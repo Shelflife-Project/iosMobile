@@ -9,14 +9,14 @@ class ProfileStore {
     var isLoading = false
     var errorMessage: String?
 
-    private let apiService: APIHelper
+    private let api: ProfileAPI
 
-    init(apiService: APIHelper) {
-        self.apiService = apiService
+    init(api: ProfileAPI = DefaultProfileAPI()) {
+        self.api = api
     }
 
     convenience init() {
-        self.init(apiService: .shared)
+        self.init(api: DefaultProfileAPI())
     }
 
     func sync(from authContext: AuthStore) {
@@ -41,10 +41,10 @@ class ProfileStore {
         defer { isLoading = false }
 
         do {
-            _ = try await apiService.updateUser(id: userId, username: username)
+            _ = try await api.updateUser(id: userId, username: username, email: nil)
 
             if let profileImageData {
-                try await apiService.uploadUserProfilePicture(userId: userId, imageData: profileImageData)
+                try await api.uploadUserProfilePicture(userId: userId, imageData: profileImageData)
             }
 
             _ = await authContext.me()

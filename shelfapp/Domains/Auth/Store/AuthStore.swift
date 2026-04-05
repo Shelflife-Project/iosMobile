@@ -4,22 +4,31 @@ import Foundation
 @MainActor
 @Observable
 class AuthStore {
+    private let api: AuthAPI
+    private let authService: AuthService
+
     var user: User?
     var isLoggedIn = false
     var isLoading = false
     var errorMessage: String?
     var hasCheckedSession = false
-
     var token: String? {
-        authService.getStoredToken()
+        didSet {
+            guard oldValue != token else { return }
+            if let token {
+                authService.saveToken(token)
+            } else {
+                authService.clearToken()
+            }
+        }
     }
 
-    private let authService: AuthService = .shared
-
-    init() {
+    init(api: AuthAPI = DefaultAuthAPI(http: DefaultHTTPClient()), authService: AuthService = .shared) {
+        self.api = api
+        self.authService = authService
         let storedToken = authService.getStoredToken()
-        APIHelper.shared.configure(baseURL: AppConfig.baseURL, token: storedToken)
-        isLoggedIn = storedToken?.isEmpty == false
+        self.token = storedToken
+        self.isLoggedIn = storedToken?.isEmpty == false
     }
 
     @discardableResult
@@ -31,18 +40,24 @@ class AuthStore {
             hasCheckedSession = true
         }
 
-        guard authService.getStoredToken() != nil else {
+        guard token != nil else {
             logout()
             return false
         }
 
         do {
-            user = try await authService.fetchCurrentUser()
+            user = try await api.me()
             isLoggedIn = true
+            hasCheckedSession = true
             return true
+        } catch APIError.forbidden {
+            logout()
+            hasCheckedSession = true
+            return false
         } catch {
             errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             logout()
+            hasCheckedSession = true
             return false
         }
     }
@@ -53,11 +68,11 @@ class AuthStore {
         defer { isLoading = false }
 
         do {
-            try await authService.login(email: email, password: password)
-            if let token = authService.getStoredToken() {
-                APIHelper.shared.setToken(token)
-            }
-            _ = await me()
+            let response = try await api.login(email: email, password: password)
+            token = response.token
+            user = response.user
+            isLoggedIn = true
+            hasCheckedSession = true
         } catch {
             errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             isLoggedIn = false
@@ -70,13 +85,16 @@ class AuthStore {
         defer { isLoading = false }
 
         do {
-            try await authService.signup(
+            let response = try await api.signup(
                 username: username,
                 email: email,
                 password: password,
                 passwordRepeat: passwordRepeat
             )
-            await login(email: email, password: password)
+            token = response.token
+            user = response.user
+            isLoggedIn = true
+            hasCheckedSession = true
         } catch {
             errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
         }
@@ -87,8 +105,8 @@ class AuthStore {
     }
 
     func logout() {
-        authService.logout()
-        APIHelper.shared.setToken(nil)
+        Task { try? await api.logout(token: token) }
+        token = nil
         isLoggedIn = false
         user = nil
     }

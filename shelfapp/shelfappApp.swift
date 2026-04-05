@@ -30,10 +30,12 @@ final class AppNotificationDelegate: NSObject, UIApplicationDelegate, UNUserNoti
 struct shelfappApp: App {
     @UIApplicationDelegateAdaptor(AppNotificationDelegate.self) var appDelegate
     @AppStorage("darkModeEnabled") private var darkModeEnabled = false
+    @State private var environment = AppEnvironment()
 
     var body: some Scene {
         WindowGroup {
             RootPage()
+                .environment(environment)
                 .preferredColorScheme(darkModeEnabled ? .dark : .light)
         }
     }

@@ -10,7 +10,7 @@ struct MemberRow: View {
         HStack(spacing: 12) {
             ZStack(alignment: .bottomTrailing) {
                 RemoteImage(
-                    url: APIHelper.shared.userProfilePictureURL(userId: member.userId),
+                    url: ResourceURLBuilder.userProfilePictureURL(userId: member.userId),
                     placeholder: "person",
                     size: 36
                 )

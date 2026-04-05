@@ -13,10 +13,10 @@ class ProductsStore {
     var hasNext = false
     var hasPrevious = false
 
-    private let apiService: APIHelper
+    private let api: ProductAPI
 
-    init(apiService: APIHelper = .shared) {
-        self.apiService = apiService
+    init(api: ProductAPI = DefaultProductAPI(http: DefaultHTTPClient())) {
+        self.api = api
     }
 
     func fetch(search: String? = nil, page: Int? = nil, size: Int? = nil) async {
@@ -29,11 +29,7 @@ class ProductsStore {
         if let size { pageSize = max(0, size) }
 
         do {
-            let result = try await apiService.fetchProductsPage(
-                search: searchText,
-                size: pageSize,
-                page: currentPage
-            )
+            let result = try await api.fetchProducts(search: searchText, size: pageSize, page: currentPage)
             products = result.items
             hasNext = result.hasNext
             hasPrevious = result.hasPrevious
@@ -62,7 +58,7 @@ class ProductsStore {
         defer { isLoading = false }
 
         do {
-            _ = try await apiService.createProduct(
+            _ = try await api.createProduct(
                 name: name,
                 category: category,
                 expirationDaysDelta: expirationDaysDelta,
@@ -81,7 +77,7 @@ class ProductsStore {
 
         do {
             guard let productId = product.serverId else { throw APIError.invalidURL }
-            _ = try await apiService.updateProduct(
+            _ = try await api.updateProduct(
                 id: productId,
                 name: name,
                 category: category,
@@ -101,7 +97,7 @@ class ProductsStore {
 
         do {
             guard let productId = product.serverId else { throw APIError.invalidURL }
-            try await apiService.deleteProduct(id: productId)
+            try await api.deleteProduct(id: productId)
             products.removeAll { $0.id == product.id }
             await fetch()
         } catch {

@@ -9,9 +9,25 @@ final class ProductsPageViewModel {
     var showPaginationSettings = false
     var selectedCategory: String?
     var searchText = ""
+    var debouncedSearchText = ""
     var pageSize = 0
     let pageSizeOptions = [0, 5, 10, 15, 20]
     var animateSettings = true
+    private var searchDebounceTask: Task<Void, Never>?
+
+    func setSearchText(_ text: String) {
+        searchText = text
+        searchDebounceTask?.cancel()
+        searchDebounceTask = Task {
+            do {
+                try await Task.sleep(nanoseconds: 300_000_000) // 300ms debounce
+                guard !Task.isCancelled else { return }
+                debouncedSearchText = text
+            } catch {
+                return
+            }
+        }
+    }
 
     func triggerSettingsAnimation() {
         animateSettings = true
@@ -26,7 +42,7 @@ final class ProductsPageViewModel {
 
     func filteredProducts(from products: [Product]) -> [Product] {
         products.filter { product in
-            let matchesSearch = searchText.isEmpty || product.name.localizedCaseInsensitiveContains(searchText)
+            let matchesSearch = debouncedSearchText.isEmpty || product.name.localizedCaseInsensitiveContains(debouncedSearchText)
             let matchesCategory = selectedCategory == nil || product.category == selectedCategory
             return matchesSearch && matchesCategory
         }
@@ -70,97 +86,100 @@ struct ProductsPage: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if productsContext.isLoading {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    List {
-                        Section {
-                            HStack(spacing: 10) {
-                                TextField("Search products...", text: Binding(
-                                    get: { viewModel.searchText },
-                                    set: { viewModel.searchText = $0 }
-                                ))
-                                .textInputAutocapitalization(.never)
-                                .autocorrectionDisabled()
+            List {
+                Section {
+                    HStack(spacing: 10) {
+                        TextField("Search products...", text: Binding(
+                            get: { viewModel.searchText },
+                            set: { viewModel.setSearchText($0) }
+                        ))
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
 
-                                Button {
-                                    viewModel.showPaginationSettings = true
-                                } label: {
-                                    Image(systemName: "gearshape.fill")
-                                        .font(.title3)
-                                        .symbolEffect(.pulse, isActive: viewModel.animateSettings)
-                                }
-                                .buttonStyle(.bordered)
-                                .accessibilityLabel("Pagination settings")
-                            }
+                        Button {
+                            viewModel.showPaginationSettings = true
+                        } label: {
+                            Image(systemName: "gearshape.fill")
+                                .font(.title3)
+                                .symbolEffect(.pulse, isActive: viewModel.animateSettings)
                         }
+                        .buttonStyle(.bordered)
+                        .accessibilityLabel("Pagination settings")
+                    }
+                }
 
-                        if productsContext.products.isEmpty {
-                            Section {
-                                VStack(spacing: 12) {
-                                    Image(systemName: "cube")
-                                        .font(.system(size: 40))
-                                        .foregroundStyle(.gray)
-                                    Text("No products found")
-                                        .font(.headline)
-                                    Text("Create your first product to get started")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                                .frame(maxWidth: .infinity, alignment: .center)
-                                .padding(.vertical, 8)
-                            }
-                        }
-
-                        if !categories.isEmpty {
-                            Picker("Category", selection: Binding(
-                                get: { viewModel.selectedCategory },
-                                set: { viewModel.selectedCategory = $0 }
-                            )) {
-                                Text("All Categories").tag(Optional<String>(nil))
-                                ForEach(categories, id: \.self) { category in
-                                    Text(category).tag(Optional<String>(category))
-                                }
-                            }.padding(.horizontal, 16)
-                            .listRowInsets(EdgeInsets())
-                        }
-
-                        if !ownProducts.isEmpty {
-                            Section("Own products") {
-                                ForEach(ownProducts) { product in
-                                    ProductListRow(product: product)
-                                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                            Button(role: .destructive) {
-                                                deleteProduct(product)
-                                            } label: {
-                                                Label("Delete", systemImage: "trash")
-                                            }
-
-                                            Button {
-                                                editingProduct = product
-                                                showEditForm = true
-                                            } label: {
-                                                Label("Edit", systemImage: "pencil")
-                                            }
-                                            .tint(.blue)
-                                        }
-                                }
-                            }
-                        }
-
-                        if !globalProducts.isEmpty {
-                            Section("Global products") {
-                                ForEach(globalProducts) { product in
-                                    ProductListRow(product: product)
-                                }
-                            }
+                if productsContext.products.isEmpty && productsContext.isLoading {
+                    Section {
+                        HStack {
+                            Spacer()
+                            ProgressView()
+                            Spacer()
                         }
                     }
-                    .scrollContentBackground(.hidden)
+                }
+
+                if productsContext.products.isEmpty && !productsContext.isLoading {
+                    Section {
+                        VStack(spacing: 12) {
+                            Image(systemName: "cube")
+                                .font(.system(size: 40))
+                                .foregroundStyle(.gray)
+                            Text("No products found")
+                                .font(.headline)
+                            Text("Create your first product to get started")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.vertical, 8)
+                    }
+                }
+
+                if !categories.isEmpty {
+                    Picker("Category", selection: Binding(
+                        get: { viewModel.selectedCategory },
+                        set: { viewModel.selectedCategory = $0 }
+                    )) {
+                        Text("All Categories").tag(Optional<String>(nil))
+                        ForEach(categories, id: \.self) { category in
+                            Text(category).tag(Optional<String>(category))
+                        }
+                    }.padding(.horizontal, 16)
+                    .listRowInsets(EdgeInsets())
+                }
+
+                if !ownProducts.isEmpty {
+                    Section("Own products") {
+                        ForEach(ownProducts) { product in
+                            ProductListRow(product: product)
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                    Button(role: .destructive) {
+                                        deleteProduct(product)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+
+                                    Button {
+                                        editingProduct = product
+                                        showEditForm = true
+                                    } label: {
+                                        Label("Edit", systemImage: "pencil")
+                                    }
+                                    .tint(.blue)
+                                }
+                        }
+                    }
+                }
+
+                if !globalProducts.isEmpty {
+                    Section("Global products") {
+                        ForEach(globalProducts) { product in
+                            ProductListRow(product: product)
+                        }
+                    }
                 }
             }
+            .scrollContentBackground(.hidden)
             .navigationTitle("Products")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
@@ -253,13 +272,14 @@ struct ProductsPage: View {
             }
             .onAppear {
                 viewModel.searchText = productsContext.searchText
+                viewModel.debouncedSearchText = productsContext.searchText
                 viewModel.pageSize = productsContext.pageSize
                 viewModel.triggerSettingsAnimation()
                 Task {
                     await productsContext.fetch(search: viewModel.searchText, page: 0, size: viewModel.pageSize)
                 }
             }
-            .onChange(of: viewModel.searchText) { _, search in
+            .onChange(of: viewModel.debouncedSearchText) { _, search in
                 Task {
                     await productsContext.fetch(search: search, page: 0)
                 }
@@ -273,7 +293,10 @@ struct ProductsPage: View {
         .appGradientBackground()
     }
 
-    private func createProduct(name: String, category: String, expirationDays: Int, barcode: String?) {
+}
+
+private extension ProductsPage {
+    func createProduct(name: String, category: String, expirationDays: Int, barcode: String?) {
         Task {
             await productsContext.add(
                 name: name,
@@ -284,7 +307,7 @@ struct ProductsPage: View {
         }
     }
 
-    private func saveProductEdits(name: String, category: String, expirationDays: Int, barcode: String?) {
+    func saveProductEdits(name: String, category: String, expirationDays: Int, barcode: String?) {
         guard let product = editingProduct else { return }
 
         Task {
@@ -298,7 +321,7 @@ struct ProductsPage: View {
         }
     }
 
-    private func deleteProduct(_ product: Product) {
+    func deleteProduct(_ product: Product) {
         Task {
             await productsContext.delete(product)
         }

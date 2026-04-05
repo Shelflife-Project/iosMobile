@@ -8,7 +8,7 @@ struct ProductListRow: View {
     var body: some View {
         HStack(spacing: 12) {
             RemoteImage(
-                url: product.serverId.flatMap { APIHelper.shared.productIconURL(productId: $0) },
+                url: product.serverId.flatMap { ResourceURLBuilder.productIconURL(productId: $0) },
                 placeholder: "shippingbox",
                 size: 40
             )

@@ -63,7 +63,7 @@ struct ShoppingListPage: View {
                     ForEach(shoppingListContext.items) { item in
                         HStack(spacing: 12) {
                             RemoteImage(
-                                url: item.product?.serverId.flatMap { APIHelper.shared.productIconURL(productId: $0) },
+                                url: item.product?.serverId.flatMap { ResourceURLBuilder.productIconURL(productId: $0) },
                                 placeholder: "cart",
                                 size: 38
                             )

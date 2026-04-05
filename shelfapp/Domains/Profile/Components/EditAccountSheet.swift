@@ -27,7 +27,7 @@ struct EditAccountSheet: View {
         guard let userId = user.serverId else {
             return nil
         }
-        guard let baseURL = APIHelper.shared.userProfilePictureURL(userId: userId) else {
+        guard let baseURL = ResourceURLBuilder.userProfilePictureURL(userId: userId) else {
             return nil
         }
         var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)
