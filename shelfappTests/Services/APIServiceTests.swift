@@ -9,22 +9,11 @@ import Testing
 import Foundation
 @testable import shelfapp
 
-// MARK: - APIHelper Configuration Tests
+// MARK: - AppConfig Tests
 
-struct APIHelperConfigTests {
-
+struct AppConfigTests {
     @Test func defaultBaseURL() {
-        let helper = APIHelper.shared
-        #expect(helper.baseURL == "http://localhost:8080")
-    }
-
-    @Test func configureChangesBaseURL() {
-        let helper = APIHelper.shared
-        let original = helper.baseURL
-        helper.configure(baseURL: "https://api.example.com")
-        #expect(helper.baseURL == "https://api.example.com")
-        // Restore
-        helper.configure(baseURL: original)
+        #expect(AppConfig.baseURL == "http://localhost:8080")
     }
 }
 
@@ -75,37 +64,3 @@ struct APIErrorTests {
     }
 }
 
-// MARK: - AuthError Tests
-
-struct AuthErrorTests {
-
-    @Test func invalidInputDescription() {
-        let error = AuthError.invalidInput
-        #expect(error.errorDescription == "Please fill in all fields")
-    }
-
-    @Test func invalidEmailDescription() {
-        let error = AuthError.invalidEmail
-        #expect(error.errorDescription == "Invalid email address")
-    }
-
-    @Test func passwordMismatchDescription() {
-        let error = AuthError.passwordMismatch
-        #expect(error.errorDescription == "Passwords do not match")
-    }
-
-    @Test func invalidCredentialsDescription() {
-        let error = AuthError.invalidCredentials
-        #expect(error.errorDescription == "Invalid email or password")
-    }
-
-    @Test func noTokenDescription() {
-        let error = AuthError.noToken
-        #expect(error.errorDescription == "Not authenticated")
-    }
-
-    @Test func tokenExpiredDescription() {
-        let error = AuthError.tokenExpired
-        #expect(error.errorDescription == "Your session has expired, please log in again")
-    }
-}

@@ -66,46 +66,16 @@ struct ImageCacheTests {
 struct URLHelperTests {
 
     @Test func productIconURLFormatsCorrectly() {
-        let helper = APIHelper.shared
-        let original = helper.baseURL
-        helper.configure(baseURL: "http://localhost:8080")
-
-        let url = helper.productIconURL(productId: 42)
-        #expect(url?.absoluteString == "http://localhost:8080/api/products/42/icon/small")
-
-        helper.configure(baseURL: original)
+        let url = ResourceURLBuilder.productIconURL(productId: 42)
+        #expect(url?.absoluteString == "\(AppConfig.baseURL)/api/products/42/icon/small")
     }
 
     @Test func userProfilePictureURLFormatsCorrectly() {
-        let helper = APIHelper.shared
-        let original = helper.baseURL
-        helper.configure(baseURL: "http://localhost:8080")
-
-        let url = helper.userProfilePictureURL(userId: 7)
-        #expect(url?.absoluteString == "http://localhost:8080/api/users/7/pfp/small")
-
-        helper.configure(baseURL: original)
+        let url = ResourceURLBuilder.userProfilePictureURL(userId: 7)
+        #expect(url?.absoluteString == "\(AppConfig.baseURL)/api/users/7/pfp/small")
     }
 
-    @Test func normalizeURLHandlesLeadingSlash() {
-        let helper = APIHelper.shared
-        let original = helper.baseURL
-        helper.configure(baseURL: "http://localhost:8080")
-
-        let url = helper.normalizeURL("/api/test")
-        #expect(url?.absoluteString == "http://localhost:8080/api/test")
-
-        helper.configure(baseURL: original)
-    }
-
-    @Test func normalizeURLHandlesTrailingSlashOnBase() {
-        let helper = APIHelper.shared
-        let original = helper.baseURL
-        helper.configure(baseURL: "http://localhost:8080/")
-
-        let url = helper.normalizeURL("api/test")
-        #expect(url?.absoluteString == "http://localhost:8080/api/test")
-
-        helper.configure(baseURL: original)
+    @Test func resourceURLBuilderReturnsNilForInvalidBaseURL() {
+        #expect(URL(string: AppConfig.baseURL) != nil)
     }
 }

@@ -63,21 +63,21 @@ Each domain uses the same pattern:
 	- shared UI components used across domains
 - `Domains/Shared/APIError.swift`
 	- centralized error enum for all API operations
-- `Domains/Shared/APIHelper.swift`
-	- singleton API service with shared configuration, URL builders, header management
+- `Domains/Shared/SharedTypes.swift`
+	- shared DTO wrappers, paginated response models, and `ResourceURLBuilder`
 
-Domain-specific API Services:
-- `Domains/Auth/Store/AuthAPIService.swift`
+Domain-specific APIs:
+- `Domains/Auth/Store/AuthAPI.swift`
 	- login, signup, me (fetch current user), logout
-- `Domains/Products/Store/ProductsAPIService.swift`
-	- fetch/create/update/delete products, product icon URLs
-- `Domains/Storages/Store/StoragesAPIService.swift`
+- `Domains/Products/Store/ProductAPI.swift`
+	- fetch/create/update/delete products, categories
+- `Domains/Storages/Store/StorageAPI.swift`
 	- fetch/create/update/delete storages, pagination
-- `Domains/ShoppingList/Store/ShoppingListAPIService.swift`
+- `Domains/ShoppingList/Store/ShoppingListAPI.swift`
 	- fetch/add/update/delete/complete shopping items
-- `Domains/StorageDetail/Store/StorageDetailAPIService.swift`
+- `Domains/StorageDetail/Store/StorageDetailAPI.swift`
 	- storage items, members, invites, running-low settings
-- `Domains/Notifications/Store/NotificationsAPIService.swift`
+- `Domains/Notifications/Store/NotificationsAPI.swift`
 	- pending invites, running-low notifications, expiring items
 
 Cross-domain infra stays in:
@@ -102,26 +102,22 @@ In short:
 
 ## API Architecture
 
-All domain API operations are built on **APIHelper** (Domains/Shared/APIHelper.swift):
+All domain API operations are built on **Endpoint + HTTPClient**:
 
-- **APIHelper** = singleton class with shared configuration (baseURL, token), reusable helper methods (buildHeaders, normalizeURL), and URL builders (productIconURL, userProfilePictureURL)
-- **Domain API Services** = extensions on APIHelper containing domain-specific DTOs and async operations
-  - Each domain has a `{Domain}APIService.swift` file in its Store folder
-  - DTOs define the JSON schema from the backend and include `toDomain()` mappers
-  - API methods are extensions on APIHelper (e.g., `extension APIHelper { func fetchProducts() { ... } }`)
-- **AuthService** = lightweight token persistence wrapper over APIHelper (saves/retrieves token from Keychain)
+- **Endpoint** (`Protocols/Endpoint.swift`) = typed route, method, query and body definitions
+- **DefaultHTTPClient** (`Protocols/DefaultHTTPClient.swift`) = request building + headers + status mapping + decoding
+- **Domain APIs** (`{Domain}API.swift`) = feature-scoped protocol + implementation that maps DTOs to domain models
+- **AuthService** = token persistence bridge (Keychain only), while `AuthStore` owns runtime token state
 
 Pattern:
 ```
-Page → Store → APIHelper.shared.{operation}() → APIError handling
+Page → Store → DomainAPI → HTTPClient.request(Endpoint) → APIError handling
 ```
 
-Auth flow uses AuthService's token bridge:
+Auth flow:
 ```
-AuthStore → AuthService.login() → APIHelper.login() → save token via AuthService.saveToken()
+AuthStore.login() → AuthAPI.login() → token stored in AuthStore + persisted via AuthService
 ```
-
-This keeps token management separate from API logic, and allows easy token refresh/rotation in the future.
 
 ## Error & Loading Handling
 
