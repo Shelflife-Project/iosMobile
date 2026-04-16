@@ -1,5 +1,6 @@
 import SwiftUI
 import Observation
+import Lottie
 
 @MainActor
 @Observable
@@ -82,118 +83,7 @@ struct StoragesPage: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                Section {
-                    HStack(spacing: 10) {
-                        TextField("Search storages...", text: Binding(
-                            get: { viewModel.searchText },
-                            set: { viewModel.setSearchText($0) }
-                        ))
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-
-                        Button {
-                            viewModel.showPaginationSettings = true
-                        } label: {
-                            Image(systemName: "gearshape.fill")
-                                .font(.title3)
-                                .symbolEffect(.pulse, isActive: viewModel.animateSettings)
-                        }
-                        .buttonStyle(.bordered)
-                        .accessibilityLabel("Pagination settings")
-                    }
-                }
-
-                if storageContext.storages.isEmpty {
-                    Section {
-                        VStack(spacing: 16) {
-                            Image(systemName: "shippingbox")
-                                .font(.system(size: 48))
-                                .foregroundStyle(.gray)
-                                .symbolEffect(.wiggle, isActive: viewModel.animateBox)
-                            Text("No Storages")
-                                .font(.headline)
-                            Text("Create your first storage to get started")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            Button(action: { viewModel.showCreateForm = true }) {
-                                Label("Create Storage", systemImage: "plus.circle.fill")
-                                    .fontWeight(.semibold)
-                            }
-                            .buttonStyle(.borderedProminent)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.vertical, 8)
-                    }
-                } else {
-                    if !ownedStorages.isEmpty {
-                        Section {
-                            ForEach(ownedStorages) { storage in
-                                NavigationLink(destination: StorageDetailPage(storage: storage)) {
-                                    StorageListRow(storage: storage, isOwner: true)
-                                }
-                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                    Button(role: .destructive) {
-                                        deleteStorage(storage)
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
-                                    }
-                                    if canEditStorage(storage) {
-                                        Button {
-                                            viewModel.editingStorage = storage
-                                            viewModel.showEditForm = true
-                                        } label: {
-                                            Label("Edit", systemImage: "pencil")
-                                        }
-                                        .tint(.blue)
-                                    }
-                                }
-                            }
-                        } header: {
-                            HStack(spacing: 6) {
-                                Image(systemName: "crown.fill")
-                                    .foregroundStyle(.yellow)
-                                    .symbolEffect(.wiggle, isActive: viewModel.animateBox)
-                                Text("My Storages")
-                            }
-                        }
-                    }
-
-                    if !memberStorages.isEmpty {
-                        Section {
-                            ForEach(memberStorages) { storage in
-                                NavigationLink(destination: StorageDetailPage(storage: storage)) {
-                                    StorageListRow(storage: storage, isOwner: false)
-                                }
-                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                    Button(role: .destructive) {
-                                        leaveStorage(storage)
-                                    } label: {
-                                        Label("Leave", systemImage: "rectangle.portrait.and.arrow.right")
-                                    }
-                                    .tint(.orange)
-                                    if canEditStorage(storage) {
-                                        Button {
-                                            viewModel.editingStorage = storage
-                                            viewModel.showEditForm = true
-                                        } label: {
-                                            Label("Edit", systemImage: "pencil")
-                                        }
-                                        .tint(.blue)
-                                    }
-                                }
-                            }
-                        } header: {
-                            HStack(spacing: 6) {
-                                Image(systemName: "person.2.fill")
-                                    .foregroundStyle(.blue)
-                                    .symbolEffect(.drawOn, isActive: viewModel.animateShared)
-                                Text("Shared with Me")
-                            }
-                        }
-                    }
-                }
-            }
+            storagesList
             .scrollContentBackground(.hidden)
             .shadow(radius: 4, x: 3, y: 3)
             .navigationTitle("Storages")
@@ -246,7 +136,7 @@ struct StoragesPage: View {
                                 Text(viewModel.pageSizeLabel(size)).tag(size)
                             }
                         }
-
+                        
                         HStack {
                             Button {
                                 Task { await storageContext.previousPage() }
@@ -255,13 +145,13 @@ struct StoragesPage: View {
                             }
                             .buttonStyle(.bordered)
                             .disabled(!storageContext.hasPrevious || storageContext.isLoading || viewModel.pageSize == 0)
-
+                            
                             Spacer()
                             Text("Page \(storageContext.currentPage + 1)")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                             Spacer()
-
+                            
                             Button {
                                 Task { await storageContext.nextPage() }
                             } label: {
@@ -314,6 +204,149 @@ struct StoragesPage: View {
         }
     }
 
+    // MARK: - List Content
+
+    private var storagesList: some View {
+        List {
+            // Search and pagination controls.
+            searchSection
+
+            if storageContext.storages.isEmpty {
+                emptyStateSection
+            } else {
+                if !ownedStorages.isEmpty {
+                    ownedStoragesSection
+                }
+
+                if !memberStorages.isEmpty {
+                    memberStoragesSection
+                }
+            }
+        }
+    }
+
+    private var searchSection: some View {
+        Section {
+            HStack(spacing: 10) {
+                TextField("Search storages...", text: Binding(
+                    get: { viewModel.searchText },
+                    set: { viewModel.setSearchText($0) }
+                ))
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+
+                Button {
+                    viewModel.showPaginationSettings = true
+                } label: {
+                    Image(systemName: "gearshape.fill")
+                        .font(.title3)
+                        .symbolEffect(.pulse, isActive: viewModel.animateSettings)
+                }
+                .buttonStyle(.bordered)
+                .accessibilityLabel("Pagination settings")
+            }
+        }
+    }
+
+    private var emptyStateSection: some View {
+        Section {
+            VStack(spacing: 16) {
+                Image(systemName: "shippingbox")
+                    .font(.system(size: 48))
+                    .foregroundStyle(.gray)
+                    .symbolEffect(.wiggle, isActive: viewModel.animateBox)
+                Text("No Storages")
+                    .font(.headline)
+                Text("Create your first storage to get started")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Button(action: { viewModel.showCreateForm = true }) {
+                    Label("Create Storage", systemImage: "plus.circle.fill")
+                        .fontWeight(.semibold)
+                }
+                .buttonStyle(.borderedProminent)
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.vertical, 8)
+        }
+    }
+
+    private var ownedStoragesSection: some View {
+        Section {
+            ForEach(ownedStorages) { storage in
+                NavigationLink(destination: StorageDetailPage(storage: storage)) {
+                    StorageListRow(storage: storage, isOwner: true)
+                }
+                .trailingSwipeActions {
+                    SwipeActionButton(
+                        title: "Delete",
+                        systemImage: "trash",
+                        tint: .red,
+                        role: .destructive
+                    ) {
+                        deleteStorage(storage)
+                    }
+
+                    if canEditStorage(storage) {
+                        SwipeActionButton(
+                            title: "Edit",
+                            systemImage: "pencil",
+                            tint: .blue
+                        ) {
+                            viewModel.editingStorage = storage
+                            viewModel.showEditForm = true
+                        }
+                    }
+                }
+            }
+        } header: {
+            HStack(spacing: 6) {
+                Image(systemName: "crown.fill")
+                    .foregroundStyle(.yellow)
+                    .symbolEffect(.wiggle, isActive: viewModel.animateBox)
+                Text("My Storages")
+            }
+        }
+    }
+
+    private var memberStoragesSection: some View {
+        Section {
+            ForEach(memberStorages) { storage in
+                NavigationLink(destination: StorageDetailPage(storage: storage)) {
+                    StorageListRow(storage: storage, isOwner: false)
+                }
+                .trailingSwipeActions {
+                    SwipeActionButton(
+                        title: "Leave",
+                        systemImage: "rectangle.portrait.and.arrow.right",
+                        tint: .orange,
+                        role: .destructive
+                    ) {
+                        leaveStorage(storage)
+                    }
+
+                    if canEditStorage(storage) {
+                        SwipeActionButton(
+                            title: "Edit",
+                            systemImage: "pencil",
+                            tint: .blue
+                        ) {
+                            viewModel.editingStorage = storage
+                            viewModel.showEditForm = true
+                        }
+                    }
+                }
+            }
+        } header: {
+            HStack(spacing: 6) {
+                Image(systemName: "person.2.fill")
+                    .foregroundStyle(.blue)
+                    .symbolEffect(.drawOn, isActive: viewModel.animateShared)
+                Text("Shared with Me")
+            }
+        }
+    }
+
 }
 
 private extension StoragesPage {
@@ -353,3 +386,5 @@ private extension StoragesPage {
 #Preview {
     StoragesPage()
 }
+
+
