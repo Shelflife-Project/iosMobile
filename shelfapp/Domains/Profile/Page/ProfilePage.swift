@@ -4,7 +4,7 @@ import Observation
 @MainActor
 @Observable
 final class ProfilePageViewModel {
-    let appVersion = "1.0.0"
+    let appVersion = "1.3.12"
     let appName = "Shelf Life"
 
     func displayValue(_ value: String?) -> String {
