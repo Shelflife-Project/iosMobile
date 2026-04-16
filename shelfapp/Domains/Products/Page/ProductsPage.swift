@@ -86,99 +86,7 @@ struct ProductsPage: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                Section {
-                    HStack(spacing: 10) {
-                        TextField("Search products...", text: Binding(
-                            get: { viewModel.searchText },
-                            set: { viewModel.setSearchText($0) }
-                        ))
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-
-                        Button {
-                            viewModel.showPaginationSettings = true
-                        } label: {
-                            Image(systemName: "gearshape.fill")
-                                .font(.title3)
-                                .symbolEffect(.pulse, isActive: viewModel.animateSettings)
-                        }
-                        .buttonStyle(.bordered)
-                        .accessibilityLabel("Pagination settings")
-                    }
-                }
-
-                if productsContext.products.isEmpty && productsContext.isLoading {
-                    Section {
-                        HStack {
-                            Spacer()
-                            ProgressView()
-                            Spacer()
-                        }
-                    }
-                }
-
-                if productsContext.products.isEmpty && !productsContext.isLoading {
-                    Section {
-                        VStack(spacing: 12) {
-                            Image(systemName: "cube")
-                                .font(.system(size: 40))
-                                .foregroundStyle(.gray)
-                            Text("No products found")
-                                .font(.headline)
-                            Text("Create your first product to get started")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.vertical, 8)
-                    }
-                }
-
-                if !categories.isEmpty {
-                    Picker("Category", selection: Binding(
-                        get: { viewModel.selectedCategory },
-                        set: { viewModel.selectedCategory = $0 }
-                    )) {
-                        Text("All Categories").tag(Optional<String>(nil))
-                        ForEach(categories, id: \.self) { category in
-                            Text(category).tag(Optional<String>(category))
-                        }
-                    }.padding(.horizontal, 16)
-                    .listRowInsets(EdgeInsets())
-                }
-
-                if !ownProducts.isEmpty {
-                    Section("Own products") {
-                        ForEach(ownProducts) { product in
-                            ProductListRow(product: product)
-                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                    Button(role: .destructive) {
-                                        deleteProduct(product)
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
-                                    }
-
-                                    Button {
-                                        editingProduct = product
-                                        showEditForm = true
-                                    } label: {
-                                        Label("Edit", systemImage: "pencil")
-                                    }
-                                    .tint(.blue)
-                                }
-                        }
-                    }
-                }
-
-                if !globalProducts.isEmpty {
-                    Section("Global products") {
-                        ForEach(globalProducts) { product in
-                            ProductListRow(product: product)
-                        }
-                    }
-                }
-            }
+            productsList
             .scrollContentBackground(.hidden)
             .navigationTitle("Products")
             .toolbar {
@@ -291,6 +199,134 @@ struct ProductsPage: View {
             }
         }
         .appGradientBackground()
+    }
+
+    // MARK: - List Content
+
+    private var productsList: some View {
+        List {
+            // Search and settings controls.
+            searchSection
+
+            if productsContext.products.isEmpty && productsContext.isLoading {
+                loadingSection
+            }
+
+            if productsContext.products.isEmpty && !productsContext.isLoading {
+                emptyStateSection
+            }
+
+            if !categories.isEmpty {
+                categoryFilterRow
+            }
+
+            if !ownProducts.isEmpty {
+                ownProductsSection
+            }
+
+            if !globalProducts.isEmpty {
+                globalProductsSection
+            }
+        }
+    }
+
+    private var searchSection: some View {
+        Section {
+            HStack(spacing: 10) {
+                TextField("Search products...", text: Binding(
+                    get: { viewModel.searchText },
+                    set: { viewModel.setSearchText($0) }
+                ))
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+
+                Button {
+                    viewModel.showPaginationSettings = true
+                } label: {
+                    Image(systemName: "gearshape.fill")
+                        .font(.title3)
+                        .symbolEffect(.pulse, isActive: viewModel.animateSettings)
+                }
+                .buttonStyle(.bordered)
+                .accessibilityLabel("Pagination settings")
+            }
+        }
+    }
+
+    private var loadingSection: some View {
+        Section {
+            HStack {
+                Spacer()
+                ProgressView()
+                Spacer()
+            }
+        }
+    }
+
+    private var emptyStateSection: some View {
+        Section {
+            VStack(spacing: 12) {
+                Image(systemName: "cube")
+                    .font(.system(size: 40))
+                    .foregroundStyle(.gray)
+                Text("No products found")
+                    .font(.headline)
+                Text("Create your first product to get started")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.vertical, 8)
+        }
+    }
+
+    private var categoryFilterRow: some View {
+        Picker("Category", selection: Binding(
+            get: { viewModel.selectedCategory },
+            set: { viewModel.selectedCategory = $0 }
+        )) {
+            Text("All Categories").tag(Optional<String>(nil))
+            ForEach(categories, id: \.self) { category in
+                Text(category).tag(Optional<String>(category))
+            }
+        }
+        .padding(.horizontal, 16)
+        .listRowInsets(EdgeInsets())
+    }
+
+    private var ownProductsSection: some View {
+        Section("Own products") {
+            ForEach(ownProducts) { product in
+                ProductListRow(product: product)
+                    .trailingSwipeActions {
+                        SwipeActionButton(
+                            title: "Delete",
+                            systemImage: "trash",
+                            tint: .red,
+                            role: .destructive
+                        ) {
+                            deleteProduct(product)
+                        }
+
+                        SwipeActionButton(
+                            title: "Edit",
+                            systemImage: "pencil",
+                            tint: .blue
+                        ) {
+                            editingProduct = product
+                            showEditForm = true
+                        }
+                    }
+            }
+        }
+    }
+
+    private var globalProductsSection: some View {
+        Section("Global products") {
+            ForEach(globalProducts) { product in
+                ProductListRow(product: product)
+            }
+        }
     }
 
 }
