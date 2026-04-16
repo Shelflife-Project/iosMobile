@@ -1,5 +1,6 @@
 import SwiftUI
 import Observation
+import Lottie
 
 @MainActor
 @Observable
@@ -92,8 +93,8 @@ struct HomePage: View {
                     .buttonStyle(.plain)
                 }
                 .padding(.horizontal)
-
-                Spacer()
+                
+                LottieView(animation: .named("Inventory")).playing(loopMode: .autoReverse)
             }
             .navigationTitle("Welcome to ShelfLife")
             .appGradientBackground()
