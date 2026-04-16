@@ -39,104 +39,7 @@ struct ShoppingListPage: View {
     }
 
     var body: some View {
-        Group {
-            if shoppingListContext.isLoading {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if shoppingListContext.items.isEmpty {
-                VStack(spacing: 20) {
-                    Image(systemName: "cart.badge.questionmark")
-                        .font(.system(size: 64))
-                        .foregroundStyle(.orange.opacity(0.6))
-
-                    Text(viewModel.emptyTitle)
-                        .font(.title)
-                        .fontWeight(.bold)
-
-                    Text(viewModel.emptySubtitle)
-                        .font(.body)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                List {
-                    ForEach(shoppingListContext.items) { item in
-                        HStack(spacing: 12) {
-                            RemoteImage(
-                                url: item.product?.serverId.flatMap { ResourceURLBuilder.productIconURL(productId: $0) },
-                                placeholder: "cart",
-                                size: 38
-                            )
-
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(viewModel.itemTitle(for: item))
-                                    .font(.headline)
-                                Text(viewModel.itemAmountText(for: item))
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                if let storageName = viewModel.itemStorageName(for: item) {
-                                    Text(storageName)
-                                        .font(.caption2)
-                                        .foregroundStyle(.tertiary)
-                                }
-                            }
-
-                            Spacer()
-
-                            HStack(spacing: 8) {
-                                Button {
-                                    guard item.amountToBuy > 1 else { return }
-                                    Task {
-                                        await shoppingListContext.updateItemAmount(item, amountToBuy: item.amountToBuy - 1)
-                                    }
-                                } label: {
-                                    Image(systemName: "minus.circle.fill")
-                                        .font(.title3)
-                                        .foregroundStyle(.orange)
-                                }
-                                .buttonStyle(.plain)
-                                .accessibilityIdentifier("shopping.minus")
-
-                                Button {
-                                    Task {
-                                        await shoppingListContext.updateItemAmount(item, amountToBuy: item.amountToBuy + 1)
-                                    }
-                                } label: {
-                                    Image(systemName: "plus.circle.fill")
-                                        .font(.title3)
-                                        .foregroundStyle(.green)
-                                }
-                                .buttonStyle(.plain)
-                                .accessibilityIdentifier("shopping.plus")
-                            }
-                        }
-                        .padding(.vertical, 6)
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button {
-                                Task {
-                                    await shoppingListContext.deleteItem(item)
-                                }
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                            .tint(.red)
-                            .accessibilityIdentifier("shopping.delete")
-
-                            Button {
-                                Task {
-                                    await shoppingListContext.completeItem(item)
-                                }
-                            } label: {
-                                Label("Done", systemImage: "checkmark")
-                            }
-                            .tint(.green)
-                            .accessibilityIdentifier("shopping.done")
-                        }
-                    }
-                }
-                .scrollContentBackground(.hidden)
-            }
-        }
+        content
         .navigationTitle("Shopping List")
         .appGradientBackground()
         .toolbar {
@@ -158,72 +61,7 @@ struct ShoppingListPage: View {
         .refreshable {
             await shoppingListContext.fetchAggregated()
         }
-        .sheet(isPresented: $showAddSheet) {
-            NavigationStack {
-                Form {
-                    Picker("Storage", selection: Binding(
-                        get: { selectedStorageId },
-                        set: { selectedStorageId = $0 }
-                    )) {
-                        ForEach(availableStorages, id: \.id) { storage in
-                            Text(storage.name).tag(storage.serverId as Int?)
-                        }
-                    }
-
-                    Picker("Product", selection: Binding(
-                        get: { selectedProductId },
-                        set: { selectedProductId = $0 }
-                    )) {
-                        ForEach(availableProducts, id: \.id) { product in
-                            Text(product.name).tag(product.serverId as Int?)
-                        }
-                    }
-
-                    Stepper("Amount to buy: \(amountToBuy)", value: $amountToBuy, in: 1...99)
-                }
-                .navigationTitle("Add Item")
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") { showAddSheet = false }
-                    }
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Add") {
-                            guard let storageId = selectedStorageId,
-                                  let productId = selectedProductId,
-                                  let storage = storageContext.storages.first(where: { $0.serverId == storageId }),
-                                  let product = productsContext.products.first(where: { $0.serverId == productId }) else {
-                                return
-                            }
-
-                            Task {
-                                await shoppingListContext.addItem(storage: storage, product: product, amountToBuy: amountToBuy)
-                                showAddSheet = false
-                                amountToBuy = 1
-                            }
-                        }
-                        .disabled(selectedStorageId == nil || selectedProductId == nil)
-                    }
-                }
-                .onAppear {
-                    let storageIds = Set(availableStorages.compactMap { $0.serverId })
-                    let productIds = Set(availableProducts.compactMap { $0.serverId })
-
-                    if let selectedStorageId, !storageIds.contains(selectedStorageId) {
-                        self.selectedStorageId = nil
-                    }
-                    if let selectedProductId, !productIds.contains(selectedProductId) {
-                        self.selectedProductId = nil
-                    }
-
-                    if self.selectedStorageId == nil {
-                        selectedStorageId = availableStorages.first?.serverId
-                    }
-                    if self.selectedProductId == nil {
-                        selectedProductId = availableProducts.first?.serverId
-                    }
-                }
-            }
-        }
+        .sheet(isPresented: $showAddSheet, content: { addItemSheet })
         .alert("Error", isPresented: Binding(
             get: { shoppingListContext.errorMessage != nil },
             set: { isPresented in
@@ -237,10 +75,206 @@ struct ShoppingListPage: View {
             Text(shoppingListContext.errorMessage ?? "An unknown error occurred")
         }
     }
+
+    // MARK: - Main Content
+
+    private var content: some View {
+        Group {
+            if shoppingListContext.isLoading {
+                loadingView
+            } else if shoppingListContext.items.isEmpty {
+                emptyStateView
+            } else {
+                itemsList
+            }
+        }
+    }
+
+    private var loadingView: some View {
+        ProgressView()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var emptyStateView: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "cart.badge.questionmark")
+                .font(.system(size: 64))
+                .foregroundStyle(.orange.opacity(0.6))
+
+            Text(viewModel.emptyTitle)
+                .font(.title)
+                .fontWeight(.bold)
+
+            Text(viewModel.emptySubtitle)
+                .font(.body)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var itemsList: some View {
+        List {
+            ForEach(shoppingListContext.items) { item in
+                itemRow(item)
+            }
+        }
+        .scrollContentBackground(.hidden)
+    }
+
+    private func itemRow(_ item: ShoppingListItem) -> some View {
+        HStack(spacing: 12) {
+            RemoteImage(
+                url: item.product?.serverId.flatMap { ResourceURLBuilder.productIconURL(productId: $0) },
+                placeholder: "cart",
+                size: 38
+            )
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(viewModel.itemTitle(for: item))
+                    .font(.headline)
+                Text(viewModel.itemAmountText(for: item))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                if let storageName = viewModel.itemStorageName(for: item) {
+                    Text(storageName)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+
+            Spacer()
+
+            amountControls(item)
+        }
+        .padding(.vertical, 6)
+        .trailingSwipeActions {
+            SwipeActionButton(
+                title: "Delete",
+                systemImage: "trash",
+                tint: .red
+            ) {
+                Task { await shoppingListContext.deleteItem(item) }
+            }
+            .accessibilityIdentifier("shopping.delete")
+
+            SwipeActionButton(
+                title: "Done",
+                systemImage: "checkmark",
+                tint: .green
+            ) {
+                Task { await shoppingListContext.completeItem(item) }
+            }
+            .accessibilityIdentifier("shopping.done")
+        }
+    }
+
+    private func amountControls(_ item: ShoppingListItem) -> some View {
+        HStack(spacing: 8) {
+            Button {
+                guard item.amountToBuy > 1 else { return }
+                Task {
+                    await shoppingListContext.updateItemAmount(item, amountToBuy: item.amountToBuy - 1)
+                }
+            } label: {
+                Image(systemName: "minus.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(.orange)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("shopping.minus")
+
+            Button {
+                Task {
+                    await shoppingListContext.updateItemAmount(item, amountToBuy: item.amountToBuy + 1)
+                }
+            } label: {
+                Image(systemName: "plus.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(.green)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("shopping.plus")
+        }
+    }
+
+    // MARK: - Sheets
+
+    private var addItemSheet: some View {
+        NavigationStack {
+            Form {
+                Picker("Storage", selection: Binding(
+                    get: { selectedStorageId },
+                    set: { selectedStorageId = $0 }
+                )) {
+                    ForEach(availableStorages, id: \.id) { storage in
+                        Text(storage.name).tag(storage.serverId as Int?)
+                    }
+                }
+
+                Picker("Product", selection: Binding(
+                    get: { selectedProductId },
+                    set: { selectedProductId = $0 }
+                )) {
+                    ForEach(availableProducts, id: \.id) { product in
+                        Text(product.name).tag(product.serverId as Int?)
+                    }
+                }
+
+                Stepper("Amount to buy: \(amountToBuy)", value: $amountToBuy, in: 1...99)
+            }
+            .navigationTitle("Add Item")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { showAddSheet = false }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Add") {
+                        guard let storageId = selectedStorageId,
+                              let productId = selectedProductId,
+                              let storage = storageContext.storages.first(where: { $0.serverId == storageId }),
+                              let product = productsContext.products.first(where: { $0.serverId == productId }) else {
+                            return
+                        }
+
+                        Task {
+                            await shoppingListContext.addItem(storage: storage, product: product, amountToBuy: amountToBuy)
+                            showAddSheet = false
+                            amountToBuy = 1
+                        }
+                    }
+                    .disabled(selectedStorageId == nil || selectedProductId == nil)
+                }
+            }
+            .onAppear(perform: syncAddSheetSelection)
+        }
+    }
+
+    private func syncAddSheetSelection() {
+        let storageIds = Set(availableStorages.compactMap { $0.serverId })
+        let productIds = Set(availableProducts.compactMap { $0.serverId })
+
+        if let selectedStorageId, !storageIds.contains(selectedStorageId) {
+            self.selectedStorageId = nil
+        }
+        if let selectedProductId, !productIds.contains(selectedProductId) {
+            self.selectedProductId = nil
+        }
+
+        if self.selectedStorageId == nil {
+            selectedStorageId = availableStorages.first?.serverId
+        }
+        if self.selectedProductId == nil {
+            selectedProductId = availableProducts.first?.serverId
+        }
+    }
 }
 
 #Preview {
     NavigationStack {
         ShoppingListPage()
+            .environment(ShoppingListStore())
+            .environment(StorageStore())
+            .environment(ProductsStore())
+        
     }
 }
