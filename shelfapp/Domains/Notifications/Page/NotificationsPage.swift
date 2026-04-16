@@ -107,13 +107,16 @@ struct NotificationsPage: View {
 
                                         Spacer()
                                     }
-                                    .notificationSwipeActions {
-                                        Button(role: .destructive) {
+                                    .trailingSwipeActions {
+                                        SwipeActionButton(
+                                            title: "Delete",
+                                            systemImage: "trash",
+                                            tint: .red,
+                                            role: .destructive
+                                        ) {
                                             Task {
                                                 await notificationsContext.deleteExpiredItem(item)
                                             }
-                                        } label: {
-                                            Label("Delete", systemImage: "trash")
                                         }
                                     }
                                 }
@@ -152,8 +155,12 @@ struct NotificationsPage: View {
 
                                             Spacer()
                                         }
-                                        .notificationSwipeActions {
-                                            Button {
+                                        .trailingSwipeActions {
+                                            SwipeActionButton(
+                                                title: "Add to List",
+                                                systemImage: "cart.badge.plus",
+                                                tint: .green
+                                            ) {
                                                 Task {
                                                     await notificationsContext.addRunningLowItemToShoppingList(
                                                         storageId: notification.storageId,
@@ -161,10 +168,7 @@ struct NotificationsPage: View {
                                                         shoppingListContext: shoppingListContext
                                                     )
                                                 }
-                                            } label: {
-                                                Label("Add to List", systemImage: "cart.badge.plus")
                                             }
-                                            .tint(.green)
                                         }
                                     }
 
@@ -196,18 +200,22 @@ struct NotificationsPage: View {
 
                                         Spacer()
                                     }
-                                    .notificationSwipeActions {
-                                        Button {
+                                    .trailingSwipeActions {
+                                        SwipeActionButton(
+                                            title: "Accept",
+                                            systemImage: "checkmark",
+                                            tint: .green
+                                        ) {
                                             acceptInvite(invite)
-                                        } label: {
-                                            Label("Accept", systemImage: "checkmark")
                                         }
-                                        .tint(.green)
 
-                                        Button(role: .destructive) {
+                                        SwipeActionButton(
+                                            title: "Decline",
+                                            systemImage: "xmark",
+                                            tint: .red,
+                                            role: .destructive
+                                        ) {
                                             declineInvite(invite)
-                                        } label: {
-                                            Label("Decline", systemImage: "xmark")
                                         }
                                     }
                                 }
@@ -254,14 +262,6 @@ struct NotificationsPage: View {
     private func declineInvite(_ invite: PendingInviteInfo) {
         Task {
             await notificationsContext.declineInvite(invite)
-        }
-    }
-}
-
-private extension View {
-    func notificationSwipeActions<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
-        self.swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            content()
         }
     }
 }
