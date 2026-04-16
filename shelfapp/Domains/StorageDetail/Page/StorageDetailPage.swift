@@ -41,134 +41,7 @@ struct StorageDetailPage: View {
     }
 
     var body: some View {
-        List {
-            if !storage.items.isEmpty {
-                Section {
-                    ForEach(storage.items) { item in
-                        ItemRow(item: item)
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                Button(role: .destructive) {
-                                    deleteItem(item)
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
-
-                                // Shopping List action
-                                let inShoppingList = storage.shoppingItems.contains(where: { $0.product?.serverId == item.product?.serverId })
-                                if inShoppingList {
-                                    Button {
-                                        if let product = item.product {
-                                            Task {
-                                                await storageDetailContext.removeFromShoppingList(product: product, from: storage)
-                                                await refreshSharedContexts()
-                                            }
-                                        }
-                                    } label: {
-                                        Label("Remove", systemImage: "cart.badge.minus")
-                                    }
-                                    .tint(.orange)
-                                } else {
-                                    Button {
-                                        if let product = item.product {
-                                            Task {
-                                                await storageDetailContext.addToShoppingList(product: product, to: storage)
-                                                await refreshSharedContexts()
-                                            }
-                                        }
-                                    } label: {
-                                        Label("Add to List", systemImage: "cart.badge.plus")
-                                    }
-                                    .tint(.green)
-                                }
-
-                                // Running Low action
-                                Button {
-                                    selectedItemForRunningLow = item
-                                    showRunningLowSheet = true
-                                } label: {
-                                    let hasSetting = storage.runningLowSettings.contains(where: { $0.productId == item.product?.serverId })
-                                    Label(hasSetting ? "Running Low" : "Set Alert", systemImage: hasSetting ? "bell.fill" : "bell")
-                                }
-                                .tint(.indigo)
-                            }
-                    }
-                    .onDelete { offsets in
-                        deleteItems(offsets: offsets)
-                    }
-                } header: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "tray.full.fill")
-                            .foregroundStyle(.blue)
-                            .symbolEffect(.drawOn, isActive: viewModel.animateItems)
-                        Text("Items in Storage")
-                    }
-                }
-            }
-
-            // Members section
-            Section {
-                if storageDetailContext.isLoadingMembers {
-                    HStack {
-                        Spacer()
-                        ProgressView()
-                        Spacer()
-                    }
-                } else if storageDetailContext.acceptedMembers.isEmpty {
-                    Text("No members")
-                        .foregroundStyle(.secondary)
-                        .font(.caption)
-                } else {
-                    ForEach(storageDetailContext.acceptedMembers) { member in
-                        MemberRow(
-                            member: member,
-                            isOwnerMember: isOwnerMember(member),
-                            showRemoveAction: isOwner && !isOwnerMember(member),
-                            onRemove: { removeMember(member) }
-                        )
-                    }
-                }
-            } header: {
-                HStack(spacing: 6) {
-                    Image(systemName: "person.2.fill")
-                        .foregroundStyle(.purple)
-                        .symbolEffect(.drawOn, isActive: viewModel.animateItems)
-                    Text("Members")
-                }
-            }
-
-            // Invited (pending) members section
-            if isOwner && !storageDetailContext.invitedMembers.isEmpty {
-                Section {
-                    ForEach(storageDetailContext.invitedMembers) { invite in
-                        PendingInviteRow(
-                            invite: invite,
-                            onCancel: { cancelInvite(invite) }
-                        )
-                    }
-                } header: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "envelope.badge.person.crop")
-                            .foregroundStyle(.orange)
-                        Text("Invited")
-                    }
-                }
-            }
-
-            if storage.items.isEmpty && storageDetailContext.members.isEmpty && !storageDetailContext.isLoadingMembers {
-                VStack(alignment: .center, spacing: 12) {
-                    Image(systemName: "tray")
-                        .font(.system(size: 40))
-                        .foregroundStyle(.gray)
-                    Text("Empty Storage")
-                        .font(.headline)
-                    Text("Add items to get started")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .center)
-                .padding()
-            }
-        }
+        detailList
         .scrollContentBackground(.hidden)
         .appGradientBackground()
         .navigationTitle(storage.name)
@@ -258,6 +131,163 @@ struct StorageDetailPage: View {
         }
     }
 
+    // MARK: - Sections
+
+    private var detailList: some View {
+        List {
+            // Inventory items in this storage.
+            if !storage.items.isEmpty {
+                itemsSection
+            }
+
+            // Members and ownership management.
+            membersSection
+
+            if isOwner && !storageDetailContext.invitedMembers.isEmpty {
+                invitedMembersSection
+            }
+
+            if storage.items.isEmpty && storageDetailContext.members.isEmpty && !storageDetailContext.isLoadingMembers {
+                emptyStateRow
+            }
+        }
+    }
+
+    private var itemsSection: some View {
+        Section {
+            ForEach(storage.items) { item in
+                ItemRow(item: item)
+                    .trailingSwipeActions {
+                        itemSwipeActions(for: item)
+                    }
+            }
+            .onDelete { offsets in
+                deleteItems(offsets: offsets)
+            }
+        } header: {
+            HStack(spacing: 6) {
+                Image(systemName: "tray.full.fill")
+                    .foregroundStyle(.blue)
+                    .symbolEffect(.drawOn, isActive: viewModel.animateItems)
+                Text("Items in Storage")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func itemSwipeActions(for item: StorageItem) -> some View {
+        SwipeActionButton(
+            title: "Delete",
+            systemImage: "trash",
+            tint: .red,
+            role: .destructive
+        ) {
+            deleteItem(item)
+        }
+
+        let inShoppingList = storage.shoppingItems.contains(where: { $0.product?.serverId == item.product?.serverId })
+        if inShoppingList {
+            SwipeActionButton(
+                title: "Remove",
+                systemImage: "cart.badge.minus",
+                tint: .orange
+            ) {
+                if let product = item.product {
+                    Task {
+                        await storageDetailContext.removeFromShoppingList(product: product, from: storage)
+                        await refreshSharedContexts()
+                    }
+                }
+            }
+        } else {
+            SwipeActionButton(
+                title: "Add to List",
+                systemImage: "cart.badge.plus",
+                tint: .green
+            ) {
+                if let product = item.product {
+                    Task {
+                        await storageDetailContext.addToShoppingList(product: product, to: storage)
+                        await refreshSharedContexts()
+                    }
+                }
+            }
+        }
+
+        SwipeActionButton(
+            title: runningLowLabel(for: item),
+            systemImage: runningLowSymbol(for: item),
+            tint: .indigo
+        ) {
+            selectedItemForRunningLow = item
+            showRunningLowSheet = true
+        }
+    }
+
+    private var membersSection: some View {
+        Section {
+            if storageDetailContext.isLoadingMembers {
+                HStack {
+                    Spacer()
+                    ProgressView()
+                    Spacer()
+                }
+            } else if storageDetailContext.acceptedMembers.isEmpty {
+                Text("No members")
+                    .foregroundStyle(.secondary)
+                    .font(.caption)
+            } else {
+                ForEach(storageDetailContext.acceptedMembers) { member in
+                    MemberRow(
+                        member: member,
+                        isOwnerMember: isOwnerMember(member),
+                        showRemoveAction: isOwner && !isOwnerMember(member),
+                        onRemove: { removeMember(member) }
+                    )
+                }
+            }
+        } header: {
+            HStack(spacing: 6) {
+                Image(systemName: "person.2.fill")
+                    .foregroundStyle(.purple)
+                    .symbolEffect(.drawOn, isActive: viewModel.animateItems)
+                Text("Members")
+            }
+        }
+    }
+
+    private var invitedMembersSection: some View {
+        Section {
+            ForEach(storageDetailContext.invitedMembers) { invite in
+                PendingInviteRow(
+                    invite: invite,
+                    onCancel: { cancelInvite(invite) }
+                )
+            }
+        } header: {
+            HStack(spacing: 6) {
+                Image(systemName: "envelope.badge.person.crop")
+                    .foregroundStyle(.orange)
+                Text("Invited")
+            }
+        }
+    }
+
+    private var emptyStateRow: some View {
+        VStack(alignment: .center, spacing: 12) {
+            Image(systemName: "tray")
+                .font(.system(size: 40))
+                .foregroundStyle(.gray)
+            Text("Empty Storage")
+                .font(.headline)
+            Text("Add items to get started")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .center)
+        .padding()
+    }
+
     // MARK: - Helpers
 
     private func isOwnerMember(_ member: StorageMemberInfo) -> Bool {
@@ -295,6 +325,16 @@ struct StorageDetailPage: View {
             await storageDetailContext.deleteItem(item, from: storage)
             await refreshSharedContexts()
         }
+    }
+
+    private func runningLowLabel(for item: StorageItem) -> String {
+        let hasSetting = storage.runningLowSettings.contains(where: { $0.productId == item.product?.serverId })
+        return hasSetting ? "Running Low" : "Set Alert"
+    }
+
+    private func runningLowSymbol(for item: StorageItem) -> String {
+        let hasSetting = storage.runningLowSettings.contains(where: { $0.productId == item.product?.serverId })
+        return hasSetting ? "bell.fill" : "bell"
     }
 
     private func refreshSharedContexts() async {

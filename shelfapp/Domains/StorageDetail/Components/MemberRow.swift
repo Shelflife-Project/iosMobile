@@ -34,12 +34,15 @@ struct MemberRow: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .swipeActions(edge: .trailing) {
+        .trailingSwipeActions {
             if showRemoveAction {
-                Button(role: .destructive) {
+                SwipeActionButton(
+                    title: "Remove",
+                    systemImage: "person.badge.minus",
+                    tint: .red,
+                    role: .destructive
+                ) {
                     onRemove()
-                } label: {
-                    Label("Remove", systemImage: "person.badge.minus")
                 }
             }
         }

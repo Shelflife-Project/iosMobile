@@ -28,13 +28,15 @@ struct PendingInviteRow: View {
                 .font(.caption)
                 .foregroundStyle(.orange)
         }
-        .swipeActions(edge: .trailing) {
-            Button(role: .destructive) {
+        .trailingSwipeActions {
+            SwipeActionButton(
+                title: "Cancel",
+                systemImage: "xmark.circle",
+                tint: .orange,
+                role: .destructive
+            ) {
                 onCancel()
-            } label: {
-                Label("Cancel", systemImage: "xmark.circle")
             }
-            .tint(.orange)
         }
     }
 }
