@@ -15,8 +15,12 @@ class ProductsStore {
 
     private let api: ProductAPI
 
-    init(api: ProductAPI = DefaultProductAPI(http: DefaultHTTPClient())) {
+    init(api: ProductAPI) {
         self.api = api
+    }
+
+    convenience init() {
+        self.init(api: DefaultProductAPI(http: DefaultHTTPClient()))
     }
 
     func fetch(search: String? = nil, page: Int? = nil, size: Int? = nil) async {

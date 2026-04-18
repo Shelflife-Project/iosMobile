@@ -56,10 +56,11 @@ struct CreateProductSheet: View {
                         onSave(name, category, expirationDays, trimmedBarcode.isEmpty ? nil : trimmedBarcode)
                         isPresented = false
                     }
+                    .tint(name.trimmingCharacters(in: .whitespaces).isEmpty || category.trimmingCharacters(in: .whitespaces).isEmpty ? .gray : .accentColor)
                     .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || category.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
-            .sheet(isPresented: $showScanner) {
+            .coloredSheet(isPresented: $showScanner) {
                 BarcodeScannerSheet { scannedCode in
                     barcode = scannedCode
                 }

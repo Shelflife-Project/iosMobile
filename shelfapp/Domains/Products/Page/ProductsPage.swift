@@ -59,7 +59,6 @@ struct ProductsPage: View {
     @Environment(ProductsStore.self) private var productsContext
     @Environment(ProfileStore.self) private var profileContext
     @State private var viewModel = ProductsPageViewModel()
-    @State private var showEditForm = false
     @State private var editingProduct: Product?
 
     var filteredProducts: [Product] {
@@ -96,7 +95,7 @@ struct ProductsPage: View {
                     }
                 }
             }
-            .sheet(isPresented: Binding(
+            .coloredSheet(isPresented: Binding(
                 get: { viewModel.showCreateForm },
                 set: { viewModel.showCreateForm = $0 }
             )) {
@@ -108,16 +107,23 @@ struct ProductsPage: View {
                     onSave: createProduct
                 )
             }
-            .sheet(isPresented: $showEditForm) {
-                if let product = editingProduct {
-                    EditProductSheet(
-                        product: product,
-                        isPresented: $showEditForm,
-                        onSave: saveProductEdits
-                    )
-                }
+            .coloredSheet(item: $editingProduct) { product in
+                EditProductSheet(
+                    product: product,
+                    isPresented: Binding(
+                        get: { editingProduct != nil },
+                        set: { isPresented in
+                            if !isPresented {
+                                editingProduct = nil
+                            }
+                        }
+                    ),
+                    onSave: { name, category, expirationDays, barcode in
+                        saveProductEdits(product: product, name: name, category: category, expirationDays: expirationDays, barcode: barcode)
+                    }
+                )
             }
-            .sheet(isPresented: Binding(
+            .coloredSheet(isPresented: Binding(
                 get: { viewModel.showPaginationSettings },
                 set: { viewModel.showPaginationSettings = $0 }
             )) {
@@ -139,6 +145,7 @@ struct ProductsPage: View {
                                 Label("Previous", systemImage: "chevron.left")
                             }
                             .buttonStyle(.bordered)
+                            .tint(!productsContext.hasPrevious || productsContext.isLoading || viewModel.pageSize == 0 ? .gray : .accentColor)
                             .disabled(!productsContext.hasPrevious || productsContext.isLoading || viewModel.pageSize == 0)
 
                             Spacer()
@@ -153,6 +160,7 @@ struct ProductsPage: View {
                                 Label("Next", systemImage: "chevron.right")
                             }
                             .buttonStyle(.bordered)
+                            .tint(!productsContext.hasNext || productsContext.isLoading || viewModel.pageSize == 0 ? .gray : .accentColor)
                             .disabled(!productsContext.hasNext || productsContext.isLoading || viewModel.pageSize == 0)
                         }
                     }
@@ -162,6 +170,7 @@ struct ProductsPage: View {
                             Button("Done") {
                                 viewModel.showPaginationSettings = false
                             }
+                            .tint(.accentColor)
                         }
                     }
                 }
@@ -239,6 +248,8 @@ struct ProductsPage: View {
                 ))
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
+                    .scrollContentBackground(.hidden)
+                    .appGradientBackground()
 
                 Button {
                     viewModel.showPaginationSettings = true
@@ -314,7 +325,6 @@ struct ProductsPage: View {
                             tint: .blue
                         ) {
                             editingProduct = product
-                            showEditForm = true
                         }
                     }
             }
@@ -343,9 +353,7 @@ private extension ProductsPage {
         }
     }
 
-    func saveProductEdits(name: String, category: String, expirationDays: Int, barcode: String?) {
-        guard let product = editingProduct else { return }
-
+    func saveProductEdits(product: Product, name: String, category: String, expirationDays: Int, barcode: String?) {
         Task {
             await productsContext.update(
                 product: product,
