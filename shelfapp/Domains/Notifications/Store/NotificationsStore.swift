@@ -12,8 +12,12 @@ class NotificationsStore {
 
     private let api: NotificationsAPI
 
-    init(api: NotificationsAPI = DefaultNotificationsAPI()) {
+    init(api: NotificationsAPI) {
         self.api = api
+    }
+
+    convenience init() {
+        self.init(api: DefaultNotificationsAPI())
     }
 
     func fetchInvites() async {

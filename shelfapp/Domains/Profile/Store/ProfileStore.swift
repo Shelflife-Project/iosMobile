@@ -11,7 +11,7 @@ class ProfileStore {
 
     private let api: ProfileAPI
 
-    init(api: ProfileAPI = DefaultProfileAPI()) {
+    init(api: ProfileAPI) {
         self.api = api
     }
 

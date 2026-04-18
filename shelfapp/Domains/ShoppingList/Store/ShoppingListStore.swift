@@ -10,8 +10,12 @@ class ShoppingListStore {
 
     private let api: ShoppingListAPI
 
-    init(api: ShoppingListAPI = DefaultShoppingListAPI()) {
+    init(api: ShoppingListAPI) {
         self.api = api
+    }
+
+    convenience init() {
+        self.init(api: DefaultShoppingListAPI())
     }
 
     func fetchAggregated() async {

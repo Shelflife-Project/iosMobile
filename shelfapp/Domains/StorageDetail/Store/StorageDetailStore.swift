@@ -11,8 +11,12 @@ class StorageDetailStore {
 
     private let api: StorageDetailAPI
 
-    init(api: StorageDetailAPI = DefaultStorageDetailAPI()) {
+    init(api: StorageDetailAPI) {
         self.api = api
+    }
+
+    convenience init() {
+        self.init(api: DefaultStorageDetailAPI())
     }
 
     var acceptedMembers: [StorageMemberInfo] {
