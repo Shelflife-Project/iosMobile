@@ -6,3 +6,9 @@
 //
 
 import Foundation
+
+public struct AuthLoginDTO: Decodable {
+    let token: String?
+    let accessToken: String?
+    let user: UserDTO?
+}

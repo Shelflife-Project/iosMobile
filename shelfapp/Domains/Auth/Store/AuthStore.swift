@@ -23,12 +23,20 @@ class AuthStore {
         }
     }
 
-    init(api: AuthAPI = DefaultAuthAPI(http: DefaultHTTPClient()), authService: AuthService = .shared) {
+    init(api: AuthAPI, authService: AuthService) {
         self.api = api
         self.authService = authService
         let storedToken = authService.getStoredToken()
         self.token = storedToken
         self.isLoggedIn = storedToken?.isEmpty == false
+    }
+
+    convenience init(api: AuthAPI) {
+        self.init(api: api, authService: .shared)
+    }
+
+    convenience init() {
+        self.init(api: DefaultAuthAPI(http: DefaultHTTPClient()), authService: .shared)
     }
 
     @discardableResult

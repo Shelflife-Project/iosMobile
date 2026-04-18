@@ -125,6 +125,23 @@ enum Endpoint {
     case updateRunningLowSetting(storageId: Int, settingId: Int, body: RunningLowUpdateBody)
     case deleteRunningLowSetting(storageId: Int, settingId: Int)
 
+    private static let profileUploadBoundary = "ShelfLifeProfileUploadBoundary"
+
+    private static func profileUploadBody(imageData: Data) -> Data {
+        var body = Data()
+        let boundary = profileUploadBoundary
+        let lineBreak = "\r\n"
+
+        body.append("--\(boundary)\(lineBreak)".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"pfp\"; filename=\"pfp.jpg\"\(lineBreak)".data(using: .utf8)!)
+        body.append("Content-Type: image/jpeg\(lineBreak)\(lineBreak)".data(using: .utf8)!)
+        body.append(imageData)
+        body.append(lineBreak.data(using: .utf8)!)
+        body.append("--\(boundary)--\(lineBreak)".data(using: .utf8)!)
+
+        return body
+    }
+
     var path: String {
         switch self {
         case .login(_): return "/api/auth/login"
@@ -227,7 +244,7 @@ enum Endpoint {
     var rawBody: Data? {
         switch self {
         case .uploadUserProfilePicture(_, let imageData):
-            return imageData
+            return Self.profileUploadBody(imageData: imageData)
         default:
             return nil
         }
@@ -240,7 +257,7 @@ enum Endpoint {
                 .createRunningLowSetting, .updateRunningLowSetting:
             return "application/json"
         case .uploadUserProfilePicture:
-            return "image/jpeg"
+            return "multipart/form-data; boundary=\(Self.profileUploadBoundary)"
         default:
             return nil
         }

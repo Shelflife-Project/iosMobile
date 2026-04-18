@@ -8,8 +8,12 @@ protocol ProfileAPI {
 struct DefaultProfileAPI: ProfileAPI {
     private let http: HTTPClient
 
-    init(http: HTTPClient = DefaultHTTPClient()) {
+    init(http: HTTPClient) {
         self.http = http
+    }
+
+    init() {
+        self.init(http: DefaultHTTPClient())
     }
 
     func updateUser(id: Int, username: String?, email: String?) async throws -> User {
