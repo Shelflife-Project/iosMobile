@@ -136,7 +136,7 @@ struct ProfilePage: View {
                     await profileContext.refreshCurrentUser(authContext: authContext)
                 }
             }
-            .sheet(isPresented: $showEditAccountSheet) {
+            .coloredSheet(isPresented: $showEditAccountSheet) {
                 if let user = profileContext.currentUser {
                     EditAccountSheet(
                         user: user,

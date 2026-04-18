@@ -60,7 +60,7 @@ struct AccountDetailsView: View {
                 hasAutoPresented = true
             }
         }
-        .sheet(isPresented: $showEditSheet) {
+        .coloredSheet(isPresented: $showEditSheet) {
             if let user = profileContext.currentUser {
                 EditAccountSheet(
                     user: user,

@@ -23,7 +23,7 @@ struct AuthActionButton: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .background(color)
+        .background(isDisabled ? Color.gray : color)
         .foregroundStyle(.white)
         .cornerRadius(8)
         .disabled(isDisabled)

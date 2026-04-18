@@ -21,7 +21,22 @@ struct SwipeActionButton: View {
         Button(role: role) {
             action()
         } label: {
-            Label(title, systemImage: systemImage)
+            HStack(spacing: 8) {
+                Image(systemName: systemImage)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(tint)
+                    .frame(width: 24, height: 24)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .stroke(tint.opacity(0.35), lineWidth: 0.75)
+                    )
+
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.primary)
+            }
+            .padding(.horizontal, 2)
         }
         .tint(tint)
     }

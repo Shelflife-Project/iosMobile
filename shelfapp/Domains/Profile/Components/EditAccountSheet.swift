@@ -83,6 +83,7 @@ struct EditAccountSheet: View {
                     Button("Cancel") {
                         isPresented = false
                     }
+                    .tint(isSaving ? .gray : .accentColor)
                     .disabled(isSaving)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -91,6 +92,7 @@ struct EditAccountSheet: View {
                             await save()
                         }
                     }
+                    .tint(isSaveDisabled || isSaving ? .gray : .accentColor)
                     .disabled(isSaveDisabled || isSaving)
                 }
             }
