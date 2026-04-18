@@ -33,6 +33,7 @@ struct InviteMemberSheet: View {
                         onInvite(email)
                         isPresented = false
                     }
+                    .tint(email.trimmingCharacters(in: .whitespaces).isEmpty || !email.contains("@") ? .gray : .accentColor)
                     .disabled(email.trimmingCharacters(in: .whitespaces).isEmpty || !email.contains("@"))
                 }
             }

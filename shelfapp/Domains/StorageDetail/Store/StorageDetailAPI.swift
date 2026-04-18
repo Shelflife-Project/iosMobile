@@ -22,8 +22,12 @@ protocol StorageDetailAPI {
 struct DefaultStorageDetailAPI: StorageDetailAPI {
     private let http: HTTPClient
 
-    init(http: HTTPClient = DefaultHTTPClient()) {
+    init(http: HTTPClient) {
         self.http = http
+    }
+
+    init() {
+        self.init(http: DefaultHTTPClient())
     }
 
     func fetchStorage(id: Int) async throws -> Storage {

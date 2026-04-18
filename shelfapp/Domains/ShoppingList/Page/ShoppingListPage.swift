@@ -45,7 +45,9 @@ struct ShoppingListPage: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
-                    showAddSheet = true
+                    Task {
+                        await prepareAddSheet()
+                    }
                 } label: {
                     Image(systemName: "plus")
                 }
@@ -61,7 +63,7 @@ struct ShoppingListPage: View {
         .refreshable {
             await shoppingListContext.fetchAggregated()
         }
-        .sheet(isPresented: $showAddSheet, content: { addItemSheet })
+        .coloredSheet(isPresented: $showAddSheet, content: { addItemSheet })
         .alert("Error", isPresented: Binding(
             get: { shoppingListContext.errorMessage != nil },
             set: { isPresented in
@@ -206,6 +208,7 @@ struct ShoppingListPage: View {
                     get: { selectedStorageId },
                     set: { selectedStorageId = $0 }
                 )) {
+                    Text("Select Storage").tag(Optional<Int>.none)
                     ForEach(availableStorages, id: \.id) { storage in
                         Text(storage.name).tag(storage.serverId as Int?)
                     }
@@ -215,6 +218,7 @@ struct ShoppingListPage: View {
                     get: { selectedProductId },
                     set: { selectedProductId = $0 }
                 )) {
+                    Text("Select Product").tag(Optional<Int>.none)
                     ForEach(availableProducts, id: \.id) { product in
                         Text(product.name).tag(product.serverId as Int?)
                     }
@@ -223,6 +227,8 @@ struct ShoppingListPage: View {
                 Stepper("Amount to buy: \(amountToBuy)", value: $amountToBuy, in: 1...99)
             }
             .navigationTitle("Add Item")
+            .scrollContentBackground(.hidden)
+            .appGradientBackground()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { showAddSheet = false }
@@ -247,6 +253,18 @@ struct ShoppingListPage: View {
             }
             .onAppear(perform: syncAddSheetSelection)
         }
+    }
+
+    @MainActor
+    private func prepareAddSheet() async {
+        if storageContext.storages.isEmpty {
+            await storageContext.fetch()
+        }
+        if productsContext.products.isEmpty {
+            await productsContext.fetch()
+        }
+        syncAddSheetSelection()
+        showAddSheet = true
     }
 
     private func syncAddSheetSelection() {

@@ -13,8 +13,12 @@ protocol ShoppingListAPI {
 struct DefaultShoppingListAPI: ShoppingListAPI {
     private let http: HTTPClient
 
-    init(http: HTTPClient = DefaultHTTPClient()) {
+    init(http: HTTPClient) {
         self.http = http
+    }
+
+    init() {
+        self.init(http: DefaultHTTPClient())
     }
 
     func fetchShoppingItems(storageId: Int) async throws -> [ShoppingListItem] {

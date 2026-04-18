@@ -55,12 +55,15 @@ struct AddItemSheet: View {
                             }
                         }
                     }
+                    .tint(selectedProduct == nil ? .gray : .accentColor)
                     .disabled(selectedProduct == nil)
                 }
             }
             .onAppear {
                 Task {
-                    await productsContext.fetch()
+                    if productsContext.products.isEmpty && !productsContext.isLoading {
+                        await productsContext.fetch()
+                    }
                 }
             }
         }

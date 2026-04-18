@@ -26,6 +26,7 @@ final class StorageDetailPageViewModel {
 }
 
 struct StorageDetailPage: View {
+    @Environment(ProductsStore.self) private var productsContext
     @Environment(StorageDetailStore.self) private var storageDetailContext
     @Environment(StorageStore.self) private var storageContext
     @Environment(ShoppingListStore.self) private var shoppingListContext
@@ -35,6 +36,7 @@ struct StorageDetailPage: View {
     @State private var viewModel = StorageDetailPageViewModel()
     @State private var selectedItemForRunningLow: StorageItem? = nil
     @State private var showRunningLowSheet = false
+    @State private var showEditStorage = false
 
     private var isOwner: Bool {
         viewModel.isOwner(storage: storage, currentUsername: profileContext.currentUser?.username)
@@ -44,15 +46,13 @@ struct StorageDetailPage: View {
         detailList
         .scrollContentBackground(.hidden)
         .appGradientBackground()
-        .navigationTitle(storage.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                EditButton()
-            }
             ToolbarItem(placement: .primaryAction) {
                 Menu {
-                    Button(action: { viewModel.showAddItem = true }) {
+                    Button(action: {
+                        Task { await prepareAddItemSheet() }
+                    }) {
                         Label("Add Item", systemImage: "plus")
                     }
                     if isOwner {
@@ -65,7 +65,7 @@ struct StorageDetailPage: View {
                 }
             }
         }
-        .sheet(isPresented: Binding(
+        .coloredSheet(isPresented: Binding(
             get: { viewModel.showAddItem },
             set: { viewModel.showAddItem = $0 }
         )) {
@@ -82,7 +82,7 @@ struct StorageDetailPage: View {
                 }
             )
         }
-        .sheet(isPresented: Binding(
+        .coloredSheet(isPresented: Binding(
             get: { viewModel.showInviteSheet },
             set: { viewModel.showInviteSheet = $0 }
         )) {
@@ -94,7 +94,7 @@ struct StorageDetailPage: View {
                 onInvite: { email in inviteMember(email: email) }
             )
         }
-        .sheet(isPresented: $showRunningLowSheet, onDismiss: { selectedItemForRunningLow = nil }) {
+        .coloredSheet(isPresented: $showRunningLowSheet, onDismiss: { selectedItemForRunningLow = nil }) {
             if let item = selectedItemForRunningLow, let product = item.product {
                 let existingSetting = storage.runningLowSettings.first(where: { $0.productId == product.serverId })
                 SetRunningLowSheet(
@@ -109,6 +109,13 @@ struct StorageDetailPage: View {
                     }
                 )
             }
+        }
+        .coloredSheet(isPresented: $showEditStorage) {
+            EditStorageSheet(
+                storage: storage,
+                isPresented: $showEditStorage,
+                onSave: saveStorageEdits
+            )
         }
         .alert("Error", isPresented: Binding(
             get: { storageDetailContext.errorMessage != nil },
@@ -133,8 +140,50 @@ struct StorageDetailPage: View {
 
     // MARK: - Sections
 
+    private var storageHeaderRow: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(storage.name)
+                    .font(.headline)
+                if let owner = storage.owner {
+                    Text("by \(owner.username)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Spacer()
+        }
+        .contentShape(Rectangle())
+        .trailingSwipeActions {
+            storageSwipeActions
+        }
+    }
+
+    @ViewBuilder
+    private var storageSwipeActions: some View {
+        SwipeActionButton(
+            title: "Edit",
+            systemImage: "pencil",
+            tint: .blue
+        ) {
+            showEditStorage = true
+        }
+
+        SwipeActionButton(
+            title: "Delete",
+            systemImage: "trash",
+            tint: .red,
+            role: .destructive
+        ) {
+            deleteStorage()
+        }
+    }
+
     private var detailList: some View {
         List {
+            // Storage header with swipe actions
+            storageHeaderRow
+
             // Inventory items in this storage.
             if !storage.items.isEmpty {
                 itemsSection
@@ -186,33 +235,18 @@ struct StorageDetailPage: View {
         }
 
         let inShoppingList = storage.shoppingItems.contains(where: { $0.product?.serverId == item.product?.serverId })
-        if inShoppingList {
-            SwipeActionButton(
-                title: "Remove",
-                systemImage: "cart.badge.minus",
-                tint: .orange
-            ) {
-                if let product = item.product {
-                    Task {
-                        await storageDetailContext.removeFromShoppingList(product: product, from: storage)
-                        await refreshSharedContexts()
-                    }
-                }
-            }
-        } else {
-            SwipeActionButton(
-                title: "Add to List",
-                systemImage: "cart.badge.plus",
-                tint: .green
-            ) {
-                if let product = item.product {
-                    Task {
-                        await storageDetailContext.addToShoppingList(product: product, to: storage)
-                        await refreshSharedContexts()
-                    }
-                }
+        SwipeActionButton(
+            title: inShoppingList ? "In List" : "Add to List",
+            systemImage: inShoppingList ? "cart.fill" : "cart.badge.plus",
+            tint: inShoppingList ? .gray : .green
+        ) {
+            guard !inShoppingList, let product = item.product else { return }
+            Task {
+                await storageDetailContext.addToShoppingList(product: product, to: storage)
+                await refreshSharedContexts()
             }
         }
+        .disabled(inShoppingList)
 
         SwipeActionButton(
             title: runningLowLabel(for: item),
@@ -310,6 +344,26 @@ struct StorageDetailPage: View {
         Task {
             await storageDetailContext.cancelInvite(invite, from: storage)
         }
+    }
+
+    private func deleteStorage() {
+        Task {
+            await storageContext.delete(storage)
+        }
+    }
+
+    private func saveStorageEdits(name: String) {
+        Task {
+            await storageContext.updateName(storage, name: name)
+        }
+    }
+
+    @MainActor
+    private func prepareAddItemSheet() async {
+        if productsContext.products.isEmpty && !productsContext.isLoading {
+            await productsContext.fetch()
+        }
+        viewModel.showAddItem = true
     }
 
     // MARK: - Item Deletion
