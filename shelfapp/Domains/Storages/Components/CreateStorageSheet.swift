@@ -27,6 +27,7 @@ struct CreateStorageSheet: View {
                         onSave(name)
                         isPresented = false
                     }
+                    .tint(name.trimmingCharacters(in: .whitespaces).isEmpty ? .gray : .accentColor)
                     .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }

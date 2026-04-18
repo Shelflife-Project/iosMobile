@@ -6,7 +6,6 @@ import Lottie
 @Observable
 final class StoragesPageViewModel {
     var showCreateForm = false
-    var showEditForm = false
     var showPaginationSettings = false
     var editingStorage: Storage?
     var animateBox = true
@@ -85,7 +84,6 @@ struct StoragesPage: View {
         NavigationStack {
             storagesList
             .scrollContentBackground(.hidden)
-            .shadow(radius: 4, x: 3, y: 3)
             .navigationTitle("Storages")
             .appGradientBackground()
             .toolbar {
@@ -95,7 +93,7 @@ struct StoragesPage: View {
                     }
                 }
             }
-            .sheet(isPresented: Binding(
+            .coloredSheet(isPresented: Binding(
                 get: { viewModel.showCreateForm },
                 set: { viewModel.showCreateForm = $0 }
             )) {
@@ -107,22 +105,26 @@ struct StoragesPage: View {
                     onSave: createStorage
                 )
             }
-            .sheet(isPresented: Binding(
-                get: { viewModel.showEditForm },
-                set: { viewModel.showEditForm = $0 }
-            )) {
-                if let storage = viewModel.editingStorage {
-                    EditStorageSheet(
-                        storage: storage,
-                        isPresented: Binding(
-                            get: { viewModel.showEditForm },
-                            set: { viewModel.showEditForm = $0 }
-                        ),
-                        onSave: saveStorageEdits
-                    )
-                }
+            .coloredSheet(item: Binding(
+                get: { viewModel.editingStorage },
+                set: { viewModel.editingStorage = $0 }
+            )) { storage in
+                EditStorageSheet(
+                    storage: storage,
+                    isPresented: Binding(
+                        get: { viewModel.editingStorage != nil },
+                        set: { isPresented in
+                            if !isPresented {
+                                viewModel.editingStorage = nil
+                            }
+                        }
+                    ),
+                    onSave: { name in
+                        saveStorageEdits(storage: storage, name: name)
+                    }
+                )
             }
-            .sheet(isPresented: Binding(
+            .coloredSheet(isPresented: Binding(
                 get: { viewModel.showPaginationSettings },
                 set: { viewModel.showPaginationSettings = $0 }
             )) {
@@ -136,37 +138,46 @@ struct StoragesPage: View {
                                 Text(viewModel.pageSizeLabel(size)).tag(size)
                             }
                         }
-                        
-                        HStack {
-                            Button {
-                                Task { await storageContext.previousPage() }
-                            } label: {
-                                Label("Previous", systemImage: "chevron.left")
+
+                        Section("Pagination") {
+                            HStack {
+                                Button {
+                                    Task { await storageContext.previousPage() }
+                                } label: {
+                                    Label("Previous", systemImage: "chevron.left")
+                                }
+                                .buttonStyle(.bordered)
+                                .tint(!storageContext.hasPrevious || storageContext.isLoading || viewModel.pageSize == 0 ? .gray : .accentColor)
+                                .disabled(!storageContext.hasPrevious || storageContext.isLoading || viewModel.pageSize == 0)
+
+                                Spacer()
+
+                                Text("Page \(storageContext.currentPage + 1)")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+
+                                Spacer()
+
+                                Button {
+                                    Task { await storageContext.nextPage() }
+                                } label: {
+                                    Label("Next", systemImage: "chevron.right")
+                                }
+                                .buttonStyle(.bordered)
+                                .tint(!storageContext.hasNext || storageContext.isLoading || viewModel.pageSize == 0 ? .gray : .accentColor)
+                                .disabled(!storageContext.hasNext || storageContext.isLoading || viewModel.pageSize == 0)
                             }
-                            .buttonStyle(.bordered)
-                            .disabled(!storageContext.hasPrevious || storageContext.isLoading || viewModel.pageSize == 0)
-                            
-                            Spacer()
-                            Text("Page \(storageContext.currentPage + 1)")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            Spacer()
-                            
-                            Button {
-                                Task { await storageContext.nextPage() }
-                            } label: {
-                                Label("Next", systemImage: "chevron.right")
-                            }
-                            .buttonStyle(.bordered)
-                            .disabled(!storageContext.hasNext || storageContext.isLoading || viewModel.pageSize == 0)
                         }
                     }
+                    .scrollContentBackground(.hidden)
+                    .appGradientBackground()
                     .navigationTitle("List Settings")
                     .toolbar {
                         ToolbarItem(placement: .confirmationAction) {
                             Button("Done") {
                                 viewModel.showPaginationSettings = false
                             }
+                            .tint(.accentColor)
                         }
                     }
                 }
@@ -208,7 +219,6 @@ struct StoragesPage: View {
 
     private var storagesList: some View {
         List {
-            // Search and pagination controls.
             searchSection
 
             if storageContext.storages.isEmpty {
@@ -246,6 +256,7 @@ struct StoragesPage: View {
                 .accessibilityLabel("Pagination settings")
             }
         }
+        .listRowBackground(Color.clear)
     }
 
     private var emptyStateSection: some View {
@@ -294,7 +305,6 @@ struct StoragesPage: View {
                             tint: .blue
                         ) {
                             viewModel.editingStorage = storage
-                            viewModel.showEditForm = true
                         }
                     }
                 }
@@ -332,7 +342,6 @@ struct StoragesPage: View {
                             tint: .blue
                         ) {
                             viewModel.editingStorage = storage
-                            viewModel.showEditForm = true
                         }
                     }
                 }
@@ -375,8 +384,7 @@ private extension StoragesPage {
         isAdmin || storage.owner?.username == currentUsername
     }
 
-    func saveStorageEdits(name: String) {
-        guard let storage = viewModel.editingStorage else { return }
+    func saveStorageEdits(storage: Storage, name: String) {
         Task {
             await storageContext.updateName(storage, name: name)
         }

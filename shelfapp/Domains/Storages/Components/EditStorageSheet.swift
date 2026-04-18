@@ -36,6 +36,7 @@ struct EditStorageSheet: View {
                         onSave(name.trimmingCharacters(in: .whitespacesAndNewlines))
                         isPresented = false
                     }
+                    .tint(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .gray : .accentColor)
                     .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }

@@ -22,8 +22,12 @@ class StorageStore {
 
     private let api: StorageAPI
 
-    init(api: StorageAPI = DefaultStorageAPI(http: DefaultHTTPClient())) {
+    init(api: StorageAPI) {
         self.api = api
+    }
+
+    convenience init() {
+        self.init(api: DefaultStorageAPI(http: DefaultHTTPClient()))
     }
 
     func fetch(search: String? = nil, page: Int? = nil, size: Int? = nil) async {
@@ -67,7 +71,7 @@ class StorageStore {
         do {
             let newStorage = try await api.createStorage(name: name)
             newStorage.owner = newStorage.owner ?? currentUser
-            await fetch()
+            await fetch(page: 0)
         } catch {
             errorMessage = "Failed to create storage: \(error.localizedDescription)"
         }
@@ -85,7 +89,7 @@ class StorageStore {
         do {
             guard let storageId = storage.serverId else { throw APIError.invalidURL }
             _ = try await api.updateStorageName(id: storageId, name: name)
-            await fetch()
+            await fetch(page: currentPage)
         } catch {
             errorMessage = "Failed to update storage: \(error.localizedDescription)"
         }
@@ -101,7 +105,11 @@ class StorageStore {
                 try await api.deleteStorage(id: storageId)
             }
             storages.removeAll { $0.id == storage.id }
-            await fetch()
+            await fetch(page: currentPage)
+
+            if storages.isEmpty && currentPage > 0 {
+                await fetch(page: 0)
+            }
         } catch {
             errorMessage = "Failed to delete storage: \(error.localizedDescription)"
         }
