@@ -1,40 +1,5 @@
 import Foundation
 
-// MARK: - Running Low Notification DTO
-
-struct RunningLowNotificationDTO: Codable {
-    let storageId: Int
-    let storageName: String
-    let items: [RunningLowItemDTO]
-
-    struct RunningLowItemDTO: Codable {
-        let id: Int
-        let productName: String
-        let quantity: Int
-    }
-}
-
-// MARK: - Running Low Legacy DTO (current backend shape)
-
-struct RunningLowLegacyDTO: Codable {
-    struct StorageRefDTO: Codable {
-        let id: Int
-        let name: String
-    }
-
-    struct ProductRefDTO: Codable {
-        let id: Int
-        let name: String
-    }
-
-    let storage: StorageRefDTO
-    let product: ProductRefDTO
-    let runningLowAt: Int?
-    let amount: Int
-}
-
-// MARK: - About To Expire Item DTO
-
 struct AboutToExpireItemDTO: Codable {
     let id: Int
     let storage: StorageDTO?
