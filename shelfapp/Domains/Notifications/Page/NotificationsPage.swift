@@ -32,20 +32,10 @@ struct NotificationsPage: View {
         return Int(ceil(diff / 86400))
     }
 
-    private func isAlreadyAddedToShoppingList(_ item: RunningLowNotification) -> Bool {
-        unresolvedRunningLowItems(for: item).isEmpty
-    }
-
     private func isLowItemAlreadyAddedToShoppingList(storageId: Int, lowItem: RunningLowNotification.Item) -> Bool {
         shoppingListContext.items.contains { shopping in
             shopping.storage?.serverId == storageId &&
             shopping.product?.serverId == lowItem.id
-        }
-    }
-
-    private func unresolvedRunningLowItems(for notification: RunningLowNotification) -> [RunningLowNotification.Item] {
-        notification.items.filter { lowItem in
-            !isLowItemAlreadyAddedToShoppingList(storageId: notification.storageId, lowItem: lowItem)
         }
     }
 
@@ -126,9 +116,9 @@ struct NotificationsPage: View {
                         if !notificationsContext.runningLowItems.isEmpty {
                             Section("Items Running Low") {
                                 ForEach(notificationsContext.runningLowItems) { notification in
-                                    let unresolvedItems = unresolvedRunningLowItems(for: notification)
+                                    ForEach(notification.items) { lowItem in
+                                        let isInShoppingList = isLowItemAlreadyAddedToShoppingList(storageId: notification.storageId, lowItem: lowItem)
 
-                                    ForEach(unresolvedItems) { lowItem in
                                         HStack(spacing: 12) {
                                             RemoteImage(
                                                 url: ResourceURLBuilder.productIconURL(productId: lowItem.id),
@@ -142,6 +132,16 @@ struct NotificationsPage: View {
                                                 Text(notification.storageName)
                                                     .font(.caption)
                                                     .foregroundStyle(.secondary)
+
+                                                if isInShoppingList {
+                                                    HStack(spacing: 4) {
+                                                        Image(systemName: "cart.fill")
+                                                        Text("In shopping list")
+                                                    }
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.green)
+                                                }
+
                                                 if lowItem.quantity <= 0 {
                                                     Text("Out of stock")
                                                         .font(.caption2)
@@ -161,6 +161,7 @@ struct NotificationsPage: View {
                                                 systemImage: "cart.badge.plus",
                                                 tint: .green
                                             ) {
+                                                guard !isInShoppingList else { return }
                                                 Task {
                                                     await notificationsContext.addRunningLowItemToShoppingList(
                                                         storageId: notification.storageId,
@@ -169,13 +170,8 @@ struct NotificationsPage: View {
                                                     )
                                                 }
                                             }
+                                            .disabled(isInShoppingList)
                                         }
-                                    }
-
-                                    if isAlreadyAddedToShoppingList(notification) {
-                                        Label("\(notification.storageName): already added to shopping list", systemImage: "checkmark.circle.fill")
-                                            .font(.caption)
-                                            .foregroundStyle(.green)
                                     }
                                 }
                             }

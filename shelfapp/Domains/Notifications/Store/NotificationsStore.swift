@@ -79,7 +79,6 @@ class NotificationsStore {
         do {
             _ = try await api.addShoppingItem(storageId: storageId, productId: productId, amountToBuy: 1)
             await shoppingListContext.fetchAggregated()
-            runningLowItems = try await api.fetchAggregatedRunningLowNotifications()
         } catch {
             errorMessage = "Failed to add running low item to shopping list: \(error.localizedDescription)"
         }

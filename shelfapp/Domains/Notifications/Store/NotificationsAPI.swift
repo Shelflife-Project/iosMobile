@@ -13,8 +13,12 @@ protocol NotificationsAPI {
 struct DefaultNotificationsAPI: NotificationsAPI {
     private let http: HTTPClient
 
-    init(http: HTTPClient = DefaultHTTPClient()) {
+    init(http: HTTPClient) {
         self.http = http
+    }
+
+    init() {
+        self.init(http: DefaultHTTPClient())
     }
 
     func fetchPendingInvites() async throws -> [PendingInviteInfo] {
