@@ -3,7 +3,6 @@ import Observation
 @MainActor
 @Observable
 final class AppEnvironment {
-    let http: HTTPClient
     let authAPI: AuthAPI
     let productAPI: ProductAPI
     let storageAPI: StorageAPI
@@ -23,16 +22,22 @@ final class AppEnvironment {
     init() {
         let authService = AuthService.shared
         var authStore: AuthStore!
-        let http = DefaultHTTPClient(tokenProvider: { authStore?.token })
-        let authAPI = DefaultAuthAPI(http: http)
-        let productAPI = DefaultProductAPI(http: http)
-        let storageAPI = DefaultStorageAPI(http: http)
-        let profileAPI = DefaultProfileAPI(http: http)
-        let shoppingListAPI = DefaultShoppingListAPI(http: http)
-        let notificationsAPI = DefaultNotificationsAPI(http: http)
-        let storageDetailAPI = DefaultStorageDetailAPI(http: http)
+        let authHTTP = DefaultAuthHTTPClient(tokenProvider: { authStore?.token })
+        let productsHTTP = DefaultProductsHTTPClient(tokenProvider: { authStore?.token })
+        let storagesHTTP = DefaultStoragesHTTPClient(tokenProvider: { authStore?.token })
+        let profileHTTP = DefaultProfileHTTPClient(tokenProvider: { authStore?.token })
+        let shoppingListHTTP = DefaultShoppingListHTTPClient(tokenProvider: { authStore?.token })
+        let notificationsHTTP = DefaultNotificationsHTTPClient(tokenProvider: { authStore?.token })
+        let storageDetailHTTP = DefaultStorageDetailHTTPClient(tokenProvider: { authStore?.token })
 
-        self.http = http
+        let authAPI = DefaultAuthAPI(http: authHTTP)
+        let productAPI = DefaultProductAPI(http: productsHTTP)
+        let storageAPI = DefaultStorageAPI(http: storagesHTTP)
+        let profileAPI = DefaultProfileAPI(http: profileHTTP)
+        let shoppingListAPI = DefaultShoppingListAPI(http: shoppingListHTTP)
+        let notificationsAPI = DefaultNotificationsAPI(http: notificationsHTTP)
+        let storageDetailAPI = DefaultStorageDetailAPI(http: storageDetailHTTP)
+
         self.authAPI = authAPI
         self.productAPI = productAPI
         self.storageAPI = storageAPI
