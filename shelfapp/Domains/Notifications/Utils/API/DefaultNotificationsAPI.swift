@@ -1,14 +1,14 @@
 import Foundation
 
 struct DefaultNotificationsAPI: NotificationsAPI {
-    private let http: HTTPClient
+    private let http: NotificationsHTTPClient
 
-    init(http: HTTPClient) {
+    init(http: NotificationsHTTPClient) {
         self.http = http
     }
 
     init() {
-        self.init(http: DefaultHTTPClient())
+        self.init(http: DefaultNotificationsHTTPClient())
     }
 
     func fetchPendingInvites() async throws -> [PendingInviteInfo] {
@@ -66,21 +66,21 @@ struct DefaultNotificationsAPI: NotificationsAPI {
     }
 
     func acceptInvite(inviteId: Int) async throws {
-        let _: EmptyResponse = try await http.request(.acceptInvite(inviteId: inviteId))
+        let _: EmptyResponse = try await http.request(.acceptInvite(.init(inviteId: inviteId)))
     }
 
     func declineInvite(inviteId: Int) async throws {
-        let _: EmptyResponse = try await http.request(.declineInvite(inviteId: inviteId))
+        let _: EmptyResponse = try await http.request(.declineInvite(.init(inviteId: inviteId)))
     }
 
     func addShoppingItem(storageId: Int, productId: Int, amountToBuy: Int) async throws -> ShoppingListItem {
         let dto: ShoppingListItemDTO = try await http.request(
-            .addShoppingItem(storageId: storageId, body: ShoppingItemCreateBody(productId: productId, amountToBuy: amountToBuy))
+            .addShoppingItem(.init(storageId: storageId, body: NotificationsRequestBody.AddShoppingItem(productId: productId, amountToBuy: amountToBuy)))
         )
         return dto.toDomain()
     }
 
     func deleteStorageItem(storageId: Int, itemId: Int) async throws {
-        let _: EmptyResponse = try await http.request(.deleteStorageItem(storageId: storageId, itemId: itemId))
+        let _: EmptyResponse = try await http.request(.deleteStorageItem(.init(storageId: storageId, itemId: itemId)))
     }
 }
