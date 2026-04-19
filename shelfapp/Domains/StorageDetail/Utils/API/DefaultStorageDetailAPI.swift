@@ -1,38 +1,38 @@
 import Foundation
 
 struct DefaultStorageDetailAPI: StorageDetailAPI {
-    private let http: HTTPClient
+    private let http: StorageDetailHTTPClient
 
-    init(http: HTTPClient) {
+    init(http: StorageDetailHTTPClient) {
         self.http = http
     }
 
     init() {
-        self.init(http: DefaultHTTPClient())
+        self.init(http: DefaultStorageDetailHTTPClient())
     }
 
     func fetchStorage(id: Int) async throws -> Storage {
-        let dto: StorageDTO = try await http.request(.storage(id: id))
+        let dto: StorageDTO = try await http.request(.storage(.init(id: id)))
         return dto.toDomain()
     }
 
     func fetchStorageItems(storageId: Int) async throws -> [StorageItem] {
-        let dtos: [StorageItemDTO] = try await http.request(.storageItems(storageId: storageId))
+        let dtos: [StorageItemDTO] = try await http.request(.storageItems(.init(storageId: storageId)))
         return dtos.map { $0.toDomain() }
     }
 
     func fetchShoppingItems(storageId: Int) async throws -> [ShoppingListItem] {
-        let dtos: [ShoppingListItemDTO] = try await http.request(.shoppingList(storageId: storageId))
+        let dtos: [ShoppingListItemDTO] = try await http.request(.shoppingList(.init(storageId: storageId)))
         return dtos.map { $0.toDomain() }
     }
 
     func fetchRunningLowSettings(storageId: Int) async throws -> [RunningLowSetting] {
-        let dtos: [RunningLowSettingDTO] = try await http.request(.runningLowSettings(storageId: storageId))
+        let dtos: [RunningLowSettingDTO] = try await http.request(.runningLowSettings(.init(storageId: storageId)))
         return dtos.map { $0.toDomain() }
     }
 
     func fetchMembers(storageId: Int) async throws -> [StorageMemberInfo] {
-        let dtos: [StorageMemberDTO] = try await http.request(.storageMembers(storageId: storageId))
+        let dtos: [StorageMemberDTO] = try await http.request(.storageMembers(.init(storageId: storageId)))
         return dtos.map {
             StorageMemberInfo(id: $0.id, userId: $0.user.id, username: $0.user.username, accepted: $0.accepted)
         }
@@ -47,61 +47,61 @@ struct DefaultStorageDetailAPI: StorageDetailAPI {
         }
 
         let dto: StorageItemDTO = try await http.request(
-            .addStorageItem(storageId: storageId, body: StorageItemCreateBody(productId: productId, expiresAt: formattedDate))
+            .addStorageItem(.init(storageId: storageId, body: StorageDetailRequestBody.AddStorageItem(productId: productId, expiresAt: formattedDate)))
         )
         return dto.toDomain()
     }
 
     func removeMember(storageId: Int, userId: Int) async throws {
-        let _: EmptyResponse = try await http.request(.removeStorageMember(storageId: storageId, userId: userId))
+        let _: EmptyResponse = try await http.request(.removeStorageMember(.init(storageId: storageId, userId: userId)))
     }
 
     func inviteMember(storageId: Int, email: String) async throws -> StorageMemberInfo {
-        let dto: StorageMemberDTO = try await http.request(.inviteStorageMember(storageId: storageId, body: InviteMemberBody(email: email)))
+        let dto: StorageMemberDTO = try await http.request(.inviteStorageMember(.init(storageId: storageId, body: StorageDetailRequestBody.InviteMember(email: email))))
         return StorageMemberInfo(id: dto.id, userId: dto.user.id, username: dto.user.username, accepted: dto.accepted)
     }
 
     func deleteStorageItem(storageId: Int, itemId: Int) async throws {
-        let _: EmptyResponse = try await http.request(.deleteStorageItem(storageId: storageId, itemId: itemId))
+        let _: EmptyResponse = try await http.request(.deleteStorageItem(.init(storageId: storageId, itemId: itemId)))
     }
 
     func deleteShoppingItem(storageId: Int, itemId: Int) async throws {
-        let _: EmptyResponse = try await http.request(.deleteShoppingItem(storageId: storageId, itemId: itemId))
+        let _: EmptyResponse = try await http.request(.deleteShoppingItem(.init(storageId: storageId, itemId: itemId)))
     }
 
     func addShoppingItem(storageId: Int, productId: Int, amountToBuy: Int) async throws -> ShoppingListItem {
         let dto: ShoppingListItemDTO = try await http.request(
-            .addShoppingItem(storageId: storageId, body: ShoppingItemCreateBody(productId: productId, amountToBuy: amountToBuy))
+            .addShoppingItem(.init(storageId: storageId, body: StorageDetailRequestBody.AddShoppingItem(productId: productId, amountToBuy: amountToBuy)))
         )
         return dto.toDomain()
     }
 
     func updateShoppingItemAmount(storageId: Int, itemId: Int, amountToBuy: Int) async throws -> ShoppingListItem {
         let dto: ShoppingListItemDTO = try await http.request(
-            .updateShoppingItem(storageId: storageId, itemId: itemId, body: ShoppingItemUpdateBody(amountToBuy: amountToBuy))
+            .updateShoppingItem(.init(storageId: storageId, itemId: itemId, body: StorageDetailRequestBody.UpdateShoppingItem(amountToBuy: amountToBuy)))
         )
         return dto.toDomain()
     }
 
     func completeShoppingItem(storageId: Int, itemId: Int) async throws {
-        let _: EmptyResponse = try await http.request(.completeShoppingItem(storageId: storageId, itemId: itemId))
+        let _: EmptyResponse = try await http.request(.completeShoppingItem(.init(storageId: storageId, itemId: itemId)))
     }
 
     func createRunningLowSetting(storageId: Int, productId: Int, threshold: Int) async throws -> RunningLowSetting {
         let dto: RunningLowSettingDTO = try await http.request(
-            .createRunningLowSetting(storageId: storageId, body: RunningLowCreateBody(productId: productId, runningLow: threshold))
+            .createRunningLowSetting(.init(storageId: storageId, body: StorageDetailRequestBody.CreateRunningLow(productId: productId, runningLow: threshold)))
         )
         return dto.toDomain()
     }
 
     func updateRunningLowSetting(storageId: Int, settingId: Int, threshold: Int) async throws -> RunningLowSetting {
         let dto: RunningLowSettingDTO = try await http.request(
-            .updateRunningLowSetting(storageId: storageId, settingId: settingId, body: RunningLowUpdateBody(runningLow: threshold))
+            .updateRunningLowSetting(.init(storageId: storageId, settingId: settingId, body: StorageDetailRequestBody.UpdateRunningLow(runningLow: threshold)))
         )
         return dto.toDomain()
     }
 
     func deleteRunningLowSetting(storageId: Int, settingId: Int) async throws {
-        let _: EmptyResponse = try await http.request(.deleteRunningLowSetting(storageId: storageId, settingId: settingId))
+        let _: EmptyResponse = try await http.request(.deleteRunningLowSetting(.init(storageId: storageId, settingId: settingId)))
     }
 }
