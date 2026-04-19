@@ -27,7 +27,7 @@ class StorageStore {
     }
 
     convenience init() {
-        self.init(api: DefaultStorageAPI(http: DefaultHTTPClient()))
+        self.init(api: DefaultStorageAPI())
     }
 
     func fetch(search: String? = nil, page: Int? = nil, size: Int? = nil) async {
