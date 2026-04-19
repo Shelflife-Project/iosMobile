@@ -1,11 +1,19 @@
 import Foundation
 
 struct DefaultProductAPI: ProductAPI {
-    let http: HTTPClient
+    let http: ProductsHTTPClient
+
+    init(http: ProductsHTTPClient) {
+        self.http = http
+    }
+
+    init() {
+        self.init(http: DefaultProductsHTTPClient())
+    }
 
     func fetchProducts(search: String = "", size: Int = 0, page: Int = 0) async throws -> PaginatedResult<Product> {
         do {
-            let payload: PaginatedResponseDTO<ProductDTO> = try await http.request(.products(search: search, page: page, size: size))
+            let payload: PaginatedResponseDTO<ProductDTO> = try await http.request(.products(.init(search: search, page: page, size: size)))
             return PaginatedResult(
                 items: payload.data.map { $0.toDomain() },
                 currentPage: payload.currentPage,
@@ -16,7 +24,7 @@ struct DefaultProductAPI: ProductAPI {
                 hasPrevious: payload.hasPrevious
             )
         } catch {
-            let items: [ProductDTO] = try await http.request(.products(search: search, page: page, size: size))
+            let items: [ProductDTO] = try await http.request(.products(.init(search: search, page: page, size: size)))
             return PaginatedResult(
                 items: items.map { $0.toDomain() },
                 currentPage: 0,
@@ -34,16 +42,16 @@ struct DefaultProductAPI: ProductAPI {
     }
 
     func createProduct(name: String, category: String, expirationDaysDelta: Int, barcode: String?) async throws -> Product {
-        let dto: ProductDTO = try await http.request(.createProduct(ProductUpsertBody(name: name, category: category, expirationDaysDelta: expirationDaysDelta, barcode: barcode)))
+        let dto: ProductDTO = try await http.request(.createProduct(ProductsRequestBody.Upsert(name: name, category: category, expirationDaysDelta: expirationDaysDelta, barcode: barcode)))
         return dto.toDomain()
     }
 
     func updateProduct(id: Int, name: String, category: String, expirationDaysDelta: Int, barcode: String?) async throws -> Product {
-        let dto: ProductDTO = try await http.request(.updateProduct(id: id, body: ProductUpsertBody(name: name, category: category, expirationDaysDelta: expirationDaysDelta, barcode: barcode)))
+        let dto: ProductDTO = try await http.request(.updateProduct(.init(id: id, body: ProductsRequestBody.Upsert(name: name, category: category, expirationDaysDelta: expirationDaysDelta, barcode: barcode))))
         return dto.toDomain()
     }
 
     func deleteProduct(id: Int) async throws {
-        let _: EmptyResponse = try await http.request(.deleteProduct(id: id))
+        let _: EmptyResponse = try await http.request(.deleteProduct(.init(id: id)))
     }
 }
