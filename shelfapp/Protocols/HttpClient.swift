@@ -1,4 +1,4 @@
 protocol HTTPClient {
-    func request<T: Decodable>(_ endpoint: Endpoint) async throws -> T
+    func request<T: Decodable, E: HTTPEndpoint>(_ endpoint: E) async throws -> T
 }
 

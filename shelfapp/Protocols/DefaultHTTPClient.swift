@@ -9,7 +9,7 @@ struct DefaultHTTPClient: HTTPClient {
         self.tokenProvider = tokenProvider
     }
 
-    func request<T: Decodable>(_ endpoint: Endpoint) async throws -> T {
+    func request<T: Decodable, E: HTTPEndpoint>(_ endpoint: E) async throws -> T {
         var url = baseURL.appendingPathComponent(endpoint.path.trimmingCharacters(in: CharacterSet(charactersIn: "/")))
 
         if !endpoint.queryItems.isEmpty {
