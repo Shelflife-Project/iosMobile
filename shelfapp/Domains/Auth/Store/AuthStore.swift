@@ -36,7 +36,7 @@ class AuthStore {
     }
 
     convenience init() {
-        self.init(api: DefaultAuthAPI(http: DefaultHTTPClient()), authService: .shared)
+        self.init(api: DefaultAuthAPI(), authService: .shared)
     }
 
     @discardableResult
