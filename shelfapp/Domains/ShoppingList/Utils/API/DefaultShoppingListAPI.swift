@@ -1,18 +1,18 @@
 import Foundation
 
 struct DefaultShoppingListAPI: ShoppingListAPI {
-    private let http: HTTPClient
+    private let http: ShoppingListHTTPClient
 
-    init(http: HTTPClient) {
+    init(http: ShoppingListHTTPClient) {
         self.http = http
     }
 
     init() {
-        self.init(http: DefaultHTTPClient())
+        self.init(http: DefaultShoppingListHTTPClient())
     }
 
     func fetchShoppingItems(storageId: Int) async throws -> [ShoppingListItem] {
-        let dtos: [ShoppingListItemDTO] = try await http.request(.shoppingList(storageId: storageId))
+        let dtos: [ShoppingListItemDTO] = try await http.request(.shoppingList(.init(storageId: storageId)))
         return dtos.map { $0.toDomain() }
     }
 
@@ -23,24 +23,24 @@ struct DefaultShoppingListAPI: ShoppingListAPI {
 
     func addShoppingItem(storageId: Int, productId: Int, amountToBuy: Int) async throws -> ShoppingListItem {
         let dto: ShoppingListItemDTO = try await http.request(
-            .addShoppingItem(storageId: storageId, body: ShoppingItemCreateBody(productId: productId, amountToBuy: amountToBuy))
+            .addShoppingItem(.init(storageId: storageId, body: ShoppingListRequestBody.AddItem(productId: productId, amountToBuy: amountToBuy)))
         )
         return dto.toDomain()
     }
 
     func updateShoppingItemAmount(storageId: Int, itemId: Int, amountToBuy: Int) async throws -> ShoppingListItem {
         let dto: ShoppingListItemDTO = try await http.request(
-            .updateShoppingItem(storageId: storageId, itemId: itemId, body: ShoppingItemUpdateBody(amountToBuy: amountToBuy))
+            .updateShoppingItem(.init(storageId: storageId, itemId: itemId, body: ShoppingListRequestBody.UpdateItem(amountToBuy: amountToBuy)))
         )
         return dto.toDomain()
     }
 
     func deleteShoppingItem(storageId: Int, itemId: Int) async throws {
-        let _: EmptyResponse = try await http.request(.deleteShoppingItem(storageId: storageId, itemId: itemId))
+        let _: EmptyResponse = try await http.request(.deleteShoppingItem(.init(storageId: storageId, itemId: itemId)))
     }
 
     func completeShoppingItem(storageId: Int, itemId: Int) async throws {
-        let _: EmptyResponse = try await http.request(.completeShoppingItem(storageId: storageId, itemId: itemId))
+        let _: EmptyResponse = try await http.request(.completeShoppingItem(.init(storageId: storageId, itemId: itemId)))
     }
 
     func addStorageItem(storageId: Int, productId: Int, expiresAt: Date?) async throws -> StorageItem {
@@ -52,7 +52,7 @@ struct DefaultShoppingListAPI: ShoppingListAPI {
         }
 
         let dto: StorageItemDTO = try await http.request(
-            .addStorageItem(storageId: storageId, body: StorageItemCreateBody(productId: productId, expiresAt: formattedDate))
+            .addStorageItem(.init(storageId: storageId, body: ShoppingListRequestBody.AddStorageItem(productId: productId, expiresAt: formattedDate)))
         )
         return dto.toDomain()
     }
