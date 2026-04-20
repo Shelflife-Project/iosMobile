@@ -156,21 +156,30 @@ struct NotificationsPage: View {
                                             Spacer()
                                         }
                                         .trailingSwipeActions {
-                                            SwipeActionButton(
-                                                title: "Add to List",
-                                                systemImage: "cart.badge.plus",
-                                                tint: .green
-                                            ) {
-                                                guard !isInShoppingList else { return }
-                                                Task {
-                                                    await notificationsContext.addRunningLowItemToShoppingList(
-                                                        storageId: notification.storageId,
-                                                        productId: lowItem.id,
-                                                        shoppingListContext: shoppingListContext
-                                                    )
+                                            if isInShoppingList {
+                                                SwipeActionButton(
+                                                    title: "In List",
+                                                    systemImage: "cart.fill",
+                                                    tint: .gray
+                                                ) {
+                                                    // Intentionally no-op: item is already in shopping list.
+                                                }
+                                                .disabled(true)
+                                            } else {
+                                                SwipeActionButton(
+                                                    title: "Add to List",
+                                                    systemImage: "cart.badge.plus",
+                                                    tint: .green
+                                                ) {
+                                                    Task {
+                                                        await notificationsContext.addRunningLowItemToShoppingList(
+                                                            storageId: notification.storageId,
+                                                            productId: lowItem.id,
+                                                            shoppingListContext: shoppingListContext
+                                                        )
+                                                    }
                                                 }
                                             }
-                                            .disabled(isInShoppingList)
                                         }
                                     }
                                 }

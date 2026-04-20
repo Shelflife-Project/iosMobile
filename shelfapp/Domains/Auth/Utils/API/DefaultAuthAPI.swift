@@ -20,15 +20,28 @@ struct DefaultAuthAPI: AuthAPI {
     }
 
     func login(email: String, password: String) async throws -> (token: String, user: User) {
-        let response: AuthLoginDTO = try await http.request(.login(.init(body: AuthRequestBody.Login(email: email, password: password))))
-        let token = response.accessToken ?? response.token ?? ""
-        guard !token.isEmpty else { throw APIError.decodingError(NSError(domain: "AuthAPI", code: -1)) }
+        
+        let response: AuthLoginDTO = try await http.request(
+            .login(
+                .init(body:AuthRequestBody.Login(email: email, password: password))
+            ))
+        
+        let token = response.token ?? ""
+        
+        guard !token.isEmpty else {
+            throw APIError.decodingError(NSError(domain: "AuthAPI", code: -1))
+        }
         return (token, response.user?.toDomain() ?? User(username: email))
     }
 
     func signup(username: String, email: String, password: String, passwordRepeat: String) async throws -> (token: String, user: User) {
-        let response: AuthSignupDTO = try await http.request(.signup(.init(body: AuthRequestBody.Signup(username: username, email: email, password: password, passwordRepeat: passwordRepeat))))
-        let token = response.accessToken ?? response.token ?? ""
+
+        let response: AuthSignupDTO = try await http.request(
+            .signup(
+                .init(body: AuthRequestBody.Signup(username: username, email: email, password: password, passwordRepeat: passwordRepeat))
+            ))
+
+        let token = response.token ?? ""
         if !token.isEmpty, let user = response.user?.toDomain() {
             return (token, user)
         }
