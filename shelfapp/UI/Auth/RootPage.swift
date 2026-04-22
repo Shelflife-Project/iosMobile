@@ -14,13 +14,11 @@ func computeNotificationsBadgeCount(
         }.count
         count += unresolvedItemsInStorage
     }
-
     return invites.count + unresolvedRunningLowCount
 }
 
 struct RootPage: View {
     @Environment(AppEnvironment.self) private var environment
-    @State private var selectedTab: TabItem = .home
     @State private var isBootstrappingData = false
     @State private var hasBootstrappedData = false
 
@@ -32,24 +30,6 @@ struct RootPage: View {
             runningLowItems: environment.notifications.runningLowItems,
             shoppingItems: environment.shoppingList.items
         )
-    }
-
-    enum TabItem: String, CaseIterable {
-        case home = "Home"
-        case storages = "Storages"
-        case products = "Products"
-        case notifications = "Notifications"
-        case profile = "Profile"
-
-        var icon: String {
-            switch self {
-            case .home: return "house.fill"
-            case .storages: return "cube.box.fill"
-            case .products: return "cube.fill"
-            case .notifications: return "bell.fill"
-            case .profile: return "person.fill"
-            }
-        }
     }
 
     var body: some View {
@@ -78,35 +58,38 @@ struct RootPage: View {
                 hasBootstrappedData = false
                 return
             }
-
             hasBootstrappedData = false
-            Task {
-                await bootstrap(force: true)
-            }
+            Task { await bootstrap(force: true) }
         }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didReceiveMemoryWarningNotification)) { _ in }
     }
 }
 
-private extension RootPage {
-    var tabContent: some View {
-        TabView(selection: $selectedTab) {
-            HomePage()
-                .tabItem {
-                    Label(TabItem.home.rawValue, systemImage: TabItem.home.icon)
-                }
-                .tag(TabItem.home)
-            NotificationsPage()
-                .tabItem {
-                    Label(TabItem.notifications.rawValue, systemImage: TabItem.notifications.icon)
-                }
-                .badge(notificationsBadgeCount == 0 ? nil : "\(notificationsBadgeCount)")
-                .tag(TabItem.notifications)
+// MARK: - Tab content
 
-            ProfilePage()
-                .tabItem {
-                    Label(TabItem.profile.rawValue, systemImage: TabItem.profile.icon)
-                }
-                .tag(TabItem.profile)
+private extension RootPage {
+    @ViewBuilder
+    var tabContent: some View {
+        @Bindable var router = environment.router
+        TabView(selection: $router.selectedTab) {
+            NavigationStack(path: $router.homePath) {
+                HomePage()
+            }
+            .tabItem { Label(AppTab.home.rawValue, systemImage: AppTab.home.icon) }
+            .tag(AppTab.home)
+
+            NavigationStack(path: $router.notificationsPath) {
+                NotificationsPage()
+            }
+            .tabItem { Label(AppTab.notifications.rawValue, systemImage: AppTab.notifications.icon) }
+            .badge(notificationsBadgeCount == 0 ? nil : "\(notificationsBadgeCount)")
+            .tag(AppTab.notifications)
+
+            NavigationStack(path: $router.profilePath) {
+                ProfilePage()
+            }
+            .tabItem { Label(AppTab.profile.rawValue, systemImage: AppTab.profile.icon) }
+            .tag(AppTab.profile)
         }
         .environment(environment.storages)
         .environment(environment.notifications)
@@ -115,8 +98,11 @@ private extension RootPage {
         .environment(environment.products)
         .environment(environment.storageDetail)
         .environment(environment.auth)
+        .environment(environment.router)
     }
 }
+
+// MARK: - Bootstrap
 
 private extension RootPage {
     func bootstrap(force: Bool = false) async {
@@ -127,7 +113,6 @@ private extension RootPage {
         environment.profile.sync(from: environment.auth)
 
         guard environment.auth.isLoggedIn else { return }
-
         if hasBootstrappedData && !force { return }
 
         isBootstrappingData = true
@@ -143,21 +128,11 @@ private extension RootPage {
     }
 
     func clearStores() {
-        environment.storages.storages = []
-        environment.storages.errorMessage = nil
-
-        environment.products.products = []
-        environment.products.errorMessage = nil
-
-        environment.shoppingList.items = []
-        environment.shoppingList.errorMessage = nil
-
-        environment.notifications.invites = []
-        environment.notifications.runningLowItems = []
-        environment.notifications.aboutToExpireItems = []
-        environment.notifications.errorMessage = nil
-
-        environment.storageDetail.members = []
-        environment.storageDetail.errorMessage = nil
+        environment.storages.storagesState = .idle
+        environment.products.productsState = .idle
+        environment.shoppingList.itemsState = .idle
+        environment.notifications.notificationsState = .idle
+        environment.storageDetail.membersState = .idle
+        environment.storageDetail.itemsState = .idle
     }
 }

@@ -2,7 +2,7 @@ import SwiftUI
 
 struct LoginFormView: View {
     @Environment(\.colorScheme) var colorScheme
-    @Environment(AuthStore.self) private var authContext
+    @Environment(AuthService.self) private var authContext
     @Binding var email: String
     @Binding var password: String
 
@@ -54,7 +54,7 @@ struct LoginFormView: View {
 
     private func login() {
         Task {
-            await authContext.login(email: email, password: password)
+            _ = try? await authContext.login(email: email, password: password)
         }
     }
 }
