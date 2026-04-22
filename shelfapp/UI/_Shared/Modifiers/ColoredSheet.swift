@@ -8,7 +8,14 @@ extension View {
     ) -> some View {
         sheet(isPresented: isPresented, onDismiss: onDismiss) {
             content()
-                .presentationBackground(Color(.systemBackground))
+                .presentationBackground {
+                    LinearGradient(
+                        colors: [.appBgGradientTop, .appBgGradientBottom],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .ignoresSafeArea()
+                }
         }
     }
 
@@ -19,7 +26,14 @@ extension View {
     ) -> some View {
         sheet(item: item, onDismiss: onDismiss) { wrappedItem in
             content(wrappedItem)
-                .presentationBackground(Color(.systemBackground))
+                .presentationBackground {
+                    LinearGradient(
+                        colors: [.appBgGradientTop, .appBgGradientBottom],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .ignoresSafeArea()
+                }
         }
     }
 }
