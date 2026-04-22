@@ -257,6 +257,7 @@ struct StoragesPage: View {
                         .symbolEffect(.pulse, isActive: viewModel.animateSettings)
                 }
                 .buttonStyle(.bordered)
+                .tint(Color.appPrimary)
                 .accessibilityLabel("Pagination settings")
             }
         }
