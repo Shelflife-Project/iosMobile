@@ -21,9 +21,9 @@ final class ShoppingListPageViewModel {
 }
 
 struct ShoppingListPage: View {
-    @Environment(ShoppingListStore.self) private var shoppingListContext
-    @Environment(StorageStore.self) private var storageContext
-    @Environment(ProductsStore.self) private var productsContext
+    @Environment(ShoppingListService.self) private var shoppingListContext
+    @Environment(StorageService.self) private var storageContext
+    @Environment(ProductService.self) private var productsContext
     @State private var showAddSheet = false
     @State private var selectedStorageId: Int?
     @State private var selectedProductId: Int?
@@ -290,9 +290,5 @@ struct ShoppingListPage: View {
 #Preview {
     NavigationStack {
         ShoppingListPage()
-            .environment(ShoppingListStore())
-            .environment(StorageStore())
-            .environment(ProductsStore())
-        
     }
 }
