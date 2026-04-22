@@ -26,11 +26,12 @@ final class AppNotificationDelegate: NSObject, UIApplicationDelegate, UNUserNoti
     }
 }
 
+@MainActor
 @main
 struct shelfappApp: App {
     @UIApplicationDelegateAdaptor(AppNotificationDelegate.self) var appDelegate
     @AppStorage("darkModeEnabled") private var darkModeEnabled = false
-    @State private var environment = AppEnvironment()
+    @State private var environment = AppEnvironment.live()
 
     var body: some Scene {
         WindowGroup {
