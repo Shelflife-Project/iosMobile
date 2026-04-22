@@ -7,14 +7,13 @@ struct MemberRow: View {
     var onRemove: () -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Spacing.md) {
             ZStack(alignment: .bottomTrailing) {
                 RemoteImage(
                     url: ResourceURLBuilder.userProfilePictureURL(userId: member.userId),
                     placeholder: "person",
                     size: 36
                 )
-
                 if isOwnerMember {
                     Image(systemName: "crown.fill")
                         .font(.system(size: 10))
@@ -24,16 +23,21 @@ struct MemberRow: View {
             }
 
             Text(member.username)
-                .font(.body)
+                .font(AppFont.body())
 
             Spacer()
 
             if isOwnerMember {
                 Text("Owner")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(AppFont.caption())
+                    .foregroundStyle(Color.appSecondaryLabel)
+                    .padding(.horizontal, Spacing.sm)
+                    .padding(.vertical, Spacing.xxs)
+                    .background(Capsule().fill(Color.appPrimary.opacity(0.12)))
             }
         }
+        .padding(.vertical, Spacing.sm)
+        .listCardBackground(accent: .appPrimary)
         .trailingSwipeActions {
             if showRemoveAction {
                 SwipeActionButton(

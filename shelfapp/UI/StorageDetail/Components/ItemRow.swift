@@ -11,42 +11,41 @@ struct ItemRow: View {
     }
 
     var body: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 5) {
+        HStack(spacing: Spacing.md) {
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
                 Text(item.product?.name ?? "Unknown")
-                    .font(.headline)
+                    .font(AppFont.bodyEmphasized())
                 if let category = item.product?.category, !category.isEmpty {
                     Text(category)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(AppFont.caption())
+                        .foregroundStyle(Color.appSecondaryLabel)
                 }
             }
 
             Spacer()
 
-            VStack(alignment: .trailing, spacing: 4) {
-                if let expires = item.expiresAt {
-                    ZStack(alignment: .topTrailing) {
-                        Text(expires, format: .dateTime.month().day())
-                            .font(.caption)
-                            .foregroundStyle(isExpired ? .red : .secondary)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(
-                                Capsule()
-                                    .fill(isExpired ? Color.red.opacity(0.15) : Color.clear)
-                            )
+            if let expires = item.expiresAt {
+                ZStack(alignment: .topTrailing) {
+                    Text(expires, format: .dateTime.month().day())
+                        .font(AppFont.caption())
+                        .foregroundStyle(isExpired ? Color.appDestructive : Color.appSecondaryLabel)
+                        .padding(.horizontal, Spacing.sm)
+                        .padding(.vertical, Spacing.xxs)
+                        .background(
+                            Capsule()
+                                .fill(isExpired ? Color.appDestructive.opacity(0.15) : Color.appPrimary.opacity(0.08))
+                        )
 
-                        if isExpired {
-                            Circle()
-                                .fill(.red)
-                                .frame(width: 8, height: 8)
-                                .offset(x: 3, y: -3)
-                        }
+                    if isExpired {
+                        Circle()
+                            .fill(Color.appDestructive)
+                            .frame(width: 8, height: 8)
+                            .offset(x: 3, y: -3)
                     }
                 }
             }
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, Spacing.sm)
+        .listCardBackground(accent: .appPrimary)
     }
 }

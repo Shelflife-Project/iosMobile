@@ -141,18 +141,24 @@ struct StorageDetailPage: View {
     // MARK: - Sections
 
     private var storageHeaderRow: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
+        HStack(spacing: Spacing.md) {
+            Image(systemName: "shippingbox.fill")
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(Color.appPrimary)
+
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
                 Text(storage.name)
-                    .font(.headline)
+                    .font(AppFont.headline())
                 if let owner = storage.owner {
                     Text("by \(owner.username)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(AppFont.caption())
+                        .foregroundStyle(Color.appSecondaryLabel)
                 }
             }
             Spacer()
         }
+        .padding(.vertical, Spacing.sm)
+        .listCardBackground(accent: .appPrimary)
         .contentShape(Rectangle())
         .trailingSwipeActions {
             storageSwipeActions
@@ -308,18 +314,20 @@ struct StorageDetailPage: View {
     }
 
     private var emptyStateRow: some View {
-        VStack(alignment: .center, spacing: 12) {
+        VStack(alignment: .center, spacing: Spacing.md) {
             Image(systemName: "tray")
                 .font(.system(size: 40))
-                .foregroundStyle(.gray)
+                .foregroundStyle(Color.appSecondaryLabel)
             Text("Empty Storage")
-                .font(.headline)
+                .font(AppFont.headline())
             Text("Add items to get started")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(AppFont.caption())
+                .foregroundStyle(Color.appSecondaryLabel)
         }
         .frame(maxWidth: .infinity, alignment: .center)
         .padding()
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
     }
 
     // MARK: - Helpers
