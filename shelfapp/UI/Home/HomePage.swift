@@ -9,7 +9,7 @@ struct HomePage: View {
     @Environment(AuthService.self) private var authContext
     @Environment(NotificationsService.self) private var notificationsContext
 
-    @State private var pageModel = HomePageModel()
+    @State private var appearance = StaggeredAppearance(slots: 3)
 
     // MARK: - Derived stats
 
@@ -22,24 +22,29 @@ struct HomePage: View {
             .navigationTitle("Welcome to ShelfLife")
             .appGradientBackground()
             .refreshable { await refreshContexts() }
-            .onAppear { pageModel.triggerStaggeredAnimations() }
+            .onAppear { appearance.trigger() }
             .task { await refreshContexts() }
     }
 
     // MARK: - Sections
 
     private var mainContent: some View {
-        VStack(spacing: Spacing.xl) {
-            subtitle
-            statCards
-            LottieView(animation: .named("Inventory")).playing(loopMode: .autoReverse)
+        ScrollView {
+            VStack(spacing: Spacing.xl) {
+                subtitle
+                statCards
+                lottieSection
+            }
+            .padding(.top, Spacing.sm)
+            .padding(.bottom, Spacing.xxl)
         }
+        .scrollIndicators(.hidden)
     }
 
     private var subtitle: some View {
-        Text("Your personal inventory management system")
-            .font(AppFont.body())
-            .foregroundStyle(.secondary)
+        Text("Your household inventory, at a glance")
+            .font(AppFont.callout())
+            .foregroundStyle(Color.appSecondaryLabel)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Spacing.base)
     }
@@ -51,38 +56,45 @@ struct HomePage: View {
                     title: "Total Storages",
                     value: "\(storages.count)",
                     icon: "shippingbox.fill",
-                    color: .blue,
+                    accent: .storages,
                     animationStyle: .wiggle,
-                    isAnimating: pageModel.animateBox
+                    isAnimating: appearance.isAnimating(0)
                 )
             }
-            .buttonStyle(.plain)
+            .buttonStyle(TappableCardStyle())
 
             NavigationLink(destination: ProductsPage()) {
                 StatCard(
                     title: "Products",
                     value: "\(totalProducts)",
-                    icon: "list.bullet.rectangle",
-                    color: .green,
+                    icon: "list.bullet.rectangle.fill",
+                    accent: .products,
                     animationStyle: .drawOn,
-                    isAnimating: pageModel.animateList
+                    isAnimating: appearance.isAnimating(1)
                 )
             }
-            .buttonStyle(.plain)
+            .buttonStyle(TappableCardStyle())
 
             NavigationLink(destination: ShoppingListPage()) {
                 StatCard(
                     title: "Shopping List",
                     value: "\(totalShoppingItems)",
                     icon: "cart.fill",
-                    color: .orange,
-                    animationStyle: .drawOn,
-                    isAnimating: pageModel.animateCart
+                    accent: .shopping,
+                    animationStyle: .bounce,
+                    isAnimating: appearance.isAnimating(2)
                 )
             }
-            .buttonStyle(.plain)
+            .buttonStyle(TappableCardStyle())
         }
         .padding(.horizontal, Spacing.base)
+    }
+
+    private var lottieSection: some View {
+        LottieView(animation: .named("Inventory"))
+            .playing(loopMode: .autoReverse)
+            .frame(maxHeight: 220)
+            .padding(.top, Spacing.sm)
     }
 
     private func refreshContexts() async {
@@ -94,25 +106,17 @@ struct HomePage: View {
     }
 }
 
-// MARK: - PageModel
+// MARK: - TappableCardStyle
 
-@MainActor
-@Observable
-final class HomePageModel {
-    var animateBox = true
-    var animateList = true
-    var animateCart = true
-
-    func triggerStaggeredAnimations() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-            withAnimation(.easeInOut(duration: 0.6)) { self.animateBox = false }
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-            withAnimation(.easeInOut(duration: 0.6)) { self.animateList = false }
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-            withAnimation(.easeInOut(duration: 0.6)) { self.animateCart = false }
-        }
+/// Button style for tap-anywhere cards: scales + haptic on press, no tint change.
+struct TappableCardStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.98 : 1)
+            .animation(.spring(response: 0.28, dampingFraction: 0.72), value: configuration.isPressed)
+            .onChange(of: configuration.isPressed) { _, pressed in
+                if pressed { Haptics.tap() }
+            }
     }
 }
 
