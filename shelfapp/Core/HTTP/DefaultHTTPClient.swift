@@ -69,7 +69,7 @@ struct DefaultHTTPClient: HTTPClient {
         do {
             return try JSONDecoder().decode(T.self, from: data)
         } catch {
-            throw APIError.decodingError(error)
+            throw APIError.decodingError(error.localizedDescription)
         }
     }
 }
