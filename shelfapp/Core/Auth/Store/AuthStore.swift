@@ -27,19 +27,21 @@ final class AuthStore {
     var hasCheckedSession = false
 
     private let tokenStore: TokenStore
+    private var _cachedToken: String?
 
     // MARK: - Derived
 
     var currentUser: User? { sessionState.value }
     var token: String? {
-        get { tokenStore.token }
+        get { _cachedToken }
         set {
+            _cachedToken = newValue
             if let newValue {
                 tokenStore.save(newValue)
             } else {
                 tokenStore.delete()
             }
-            sharedJWTToken = tokenStore.token
+            sharedJWTToken = _cachedToken
         }
     }
     var isLoggedIn: Bool { token != nil && currentUser != nil }
@@ -79,15 +81,16 @@ final class AuthStore {
     init(tokenStore: TokenStore = KeychainTokenStore()) {
         self.tokenStore = tokenStore
         migrateTokenFromUserDefaultsIfNeeded()
+        _cachedToken = tokenStore.token
 
         if let data = UserDefaults.standard.data(forKey: "auth_user"),
            let decoded = try? JSONDecoder().decode(User.self, from: data) {
             sessionState = .loaded(decoded)
         }
-        if token == nil {
+        if _cachedToken == nil {
             hasCheckedSession = true
         }
-        sharedJWTToken = token
+        sharedJWTToken = _cachedToken
     }
 
     // MARK: - Auth Operations
