@@ -98,36 +98,38 @@ struct NotificationsPage: View {
                         let item = sortedAboutToExpire[index]
                         let days = daysToExpire(item)
 
-                        HStack(spacing: 12) {
+                        HStack(spacing: Spacing.md) {
                             RemoteImage(
                                 url: item.product?.serverId.flatMap { ResourceURLBuilder.productIconURL(productId: $0) },
                                 placeholder: "clock.badge.exclamationmark",
                                 size: 40
                             )
 
-                            VStack(alignment: .leading, spacing: 4) {
+                            VStack(alignment: .leading, spacing: Spacing.xxs) {
                                 Text(item.product?.name ?? "Unknown")
-                                    .font(.headline)
+                                    .font(AppFont.bodyEmphasized())
                                 Text(item.storage?.name ?? "Unknown storage")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .font(AppFont.caption())
+                                    .foregroundStyle(Color.appSecondaryLabel)
                                 if days < 0 {
                                     Text("Expired \(abs(days)) day(s) ago")
-                                        .font(.caption2)
-                                        .foregroundStyle(.red)
+                                        .font(AppFont.caption2())
+                                        .foregroundStyle(Color.appDestructive)
                                 } else if days == 0 {
                                     Text("Expires today")
-                                        .font(.caption2)
+                                        .font(AppFont.caption2())
                                         .foregroundStyle(.orange)
                                 } else {
                                     Text("\(days) day(s) left")
-                                        .font(.caption2)
-                                        .foregroundStyle(.green)
+                                        .font(AppFont.caption2())
+                                        .foregroundStyle(Color.appAccentFresh)
                                 }
                             }
 
                             Spacer()
                         }
+                        .padding(.vertical, Spacing.sm)
+                        .listCardBackground(accent: days < 0 ? Color.appDestructive : .appAccentWarm)
                         .trailingSwipeActions {
                             SwipeActionButton(
                                 title: "Delete",
@@ -135,9 +137,7 @@ struct NotificationsPage: View {
                                 tint: .red,
                                 role: .destructive
                             ) {
-                                Task {
-                                    await deleteExpiredItem(item)
-                                }
+                                Task { await deleteExpiredItem(item) }
                             }
                         }
                     }
@@ -150,57 +150,50 @@ struct NotificationsPage: View {
                         ForEach(notification.items) { lowItem in
                             let isInShoppingList = isLowItemAlreadyAddedToShoppingList(storageId: notification.storageId, lowItem: lowItem)
 
-                            HStack(spacing: 12) {
+                            HStack(spacing: Spacing.md) {
                                 RemoteImage(
                                     url: ResourceURLBuilder.productIconURL(productId: lowItem.id),
                                     placeholder: "cart",
                                     size: 40
                                 )
 
-                                VStack(alignment: .leading, spacing: 4) {
+                                VStack(alignment: .leading, spacing: Spacing.xxs) {
                                     Text(lowItem.productName)
-                                        .font(.headline)
+                                        .font(AppFont.bodyEmphasized())
                                     Text(notification.storageName)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                        .font(AppFont.caption())
+                                        .foregroundStyle(Color.appSecondaryLabel)
 
                                     if isInShoppingList {
-                                        HStack(spacing: 4) {
+                                        HStack(spacing: Spacing.xs) {
                                             Image(systemName: "cart.fill")
                                             Text("In shopping list")
                                         }
-                                        .font(.caption2)
-                                        .foregroundStyle(.green)
+                                        .font(AppFont.caption2())
+                                        .foregroundStyle(Color.appAccentFresh)
                                     }
 
                                     if lowItem.quantity <= 0 {
                                         Text("Out of stock")
-                                            .font(.caption2)
-                                            .foregroundStyle(.red)
+                                            .font(AppFont.caption2())
+                                            .foregroundStyle(Color.appDestructive)
                                     } else {
                                         Text("Only \(lowItem.quantity) left")
-                                            .font(.caption2)
-                                            .foregroundStyle(.orange)
+                                            .font(AppFont.caption2())
+                                            .foregroundStyle(.appAccentWarm)
                                     }
                                 }
 
                                 Spacer()
                             }
+                            .padding(.vertical, Spacing.sm)
+                            .listCardBackground(accent: .appAccentWarm)
                             .trailingSwipeActions {
                                 if isInShoppingList {
-                                    SwipeActionButton(
-                                        title: "In List",
-                                        systemImage: "cart.fill",
-                                        tint: .gray
-                                    ) {
-                                    }
-                                    .disabled(true)
+                                    SwipeActionButton(title: "In List", systemImage: "cart.fill", tint: .gray) {}
+                                        .disabled(true)
                                 } else {
-                                    SwipeActionButton(
-                                        title: "Add to List",
-                                        systemImage: "cart.badge.plus",
-                                        tint: .green
-                                    ) {
+                                    SwipeActionButton(title: "Add to List", systemImage: "cart.badge.plus", tint: .green) {
                                         Task {
                                             await notificationsContext.addRunningLowItemToShoppingList(
                                                 storageId: notification.storageId,
@@ -219,37 +212,29 @@ struct NotificationsPage: View {
             if !notificationsContext.invites.isEmpty {
                 Section("Storage Invitations") {
                     ForEach(notificationsContext.invites) { invite in
-                        HStack(spacing: 12) {
+                        HStack(spacing: Spacing.md) {
                             Image(systemName: "envelope.badge.fill")
-                                .foregroundStyle(.orange)
-                                .font(.system(size: 20))
+                                .foregroundStyle(Color.appPrimary)
+                                .font(.system(size: 22))
                                 .symbolEffect(.drawOn, isActive: viewModel.animateEnvelope)
 
-                            VStack(alignment: .leading, spacing: 4) {
+                            VStack(alignment: .leading, spacing: Spacing.xxs) {
                                 Text(invite.storageName)
-                                    .font(.headline)
+                                    .font(AppFont.bodyEmphasized())
                                 Text("Invited by \(invite.invitedBy)")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .font(AppFont.caption())
+                                    .foregroundStyle(Color.appSecondaryLabel)
                             }
 
                             Spacer()
                         }
+                        .padding(.vertical, Spacing.sm)
+                        .listCardBackground(accent: .appPrimary)
                         .trailingSwipeActions {
-                            SwipeActionButton(
-                                title: "Accept",
-                                systemImage: "checkmark",
-                                tint: .green
-                            ) {
+                            SwipeActionButton(title: "Accept", systemImage: "checkmark", tint: .green) {
                                 acceptInvite(invite)
                             }
-
-                            SwipeActionButton(
-                                title: "Decline",
-                                systemImage: "xmark",
-                                tint: .red,
-                                role: .destructive
-                            ) {
+                            SwipeActionButton(title: "Decline", systemImage: "xmark", tint: .red, role: .destructive) {
                                 declineInvite(invite)
                             }
                         }
