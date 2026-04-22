@@ -56,8 +56,8 @@ final class ProductsPageViewModel {
 }
 
 struct ProductsPage: View {
-    @Environment(ProductsStore.self) private var productsContext
-    @Environment(ProfileStore.self) private var profileContext
+    @Environment(ProductService.self) private var productsContext
+    @Environment(ProfileService.self) private var profileContext
     @State private var viewModel = ProductsPageViewModel()
     @State private var editingProduct: Product?
 
@@ -83,9 +83,8 @@ struct ProductsPage: View {
         return filteredProducts.filter { $0.ownerId != currentUserId }
     }
 
-    var body: some View {
-        NavigationStack {
-            productsList
+    private var pageContent: some View {
+        productsList
             .scrollContentBackground(.hidden)
             .navigationTitle("Products")
             .toolbar {
@@ -206,6 +205,11 @@ struct ProductsPage: View {
                     await productsContext.fetch(page: 0, size: pageSize)
                 }
             }
+    }
+
+    var body: some View {
+        NavigationStack {
+            pageContent
         }
         .appGradientBackground()
     }
