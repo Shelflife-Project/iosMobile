@@ -60,8 +60,8 @@ final class StoragesPageViewModel {
 }
 
 struct StoragesPage: View {
-    @Environment(StorageStore.self) private var storageContext
-    @Environment(ProfileStore.self) private var profileContext
+    @Environment(StorageService.self) private var storageContext
+    @Environment(ProfileService.self) private var profileContext
     @State private var viewModel = StoragesPageViewModel()
 
     private var currentUsername: String? {
@@ -80,9 +80,8 @@ struct StoragesPage: View {
         viewModel.memberStorages(from: storageContext.storages, currentUsername: currentUsername)
     }
 
-    var body: some View {
-        NavigationStack {
-            storagesList
+    private var pageContent: some View {
+        storagesList
             .scrollContentBackground(.hidden)
             .navigationTitle("Storages")
             .appGradientBackground()
@@ -212,6 +211,11 @@ struct StoragesPage: View {
                     await storageContext.fetch(page: 0, size: pageSize)
                 }
             }
+    }
+
+    var body: some View {
+        NavigationStack {
+            pageContent
         }
     }
 
