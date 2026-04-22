@@ -124,23 +124,23 @@ struct ShoppingListPage: View {
     }
 
     private func itemRow(_ item: ShoppingListItem) -> some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Spacing.md) {
             RemoteImage(
                 url: item.product?.serverId.flatMap { ResourceURLBuilder.productIconURL(productId: $0) },
                 placeholder: "cart",
                 size: 38
             )
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
                 Text(viewModel.itemTitle(for: item))
-                    .font(.headline)
+                    .font(AppFont.bodyEmphasized())
                 Text(viewModel.itemAmountText(for: item))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(AppFont.caption())
+                    .foregroundStyle(Color.appSecondaryLabel)
                 if let storageName = viewModel.itemStorageName(for: item) {
                     Text(storageName)
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
+                        .font(AppFont.caption2())
+                        .foregroundStyle(Color.appSecondaryLabel.opacity(0.7))
                 }
             }
 
@@ -148,7 +148,8 @@ struct ShoppingListPage: View {
 
             amountControls(item)
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, Spacing.sm)
+        .listCardBackground(accent: .appAccentWarm)
         .trailingSwipeActions {
             SwipeActionButton(
                 title: "Delete",
@@ -171,28 +172,24 @@ struct ShoppingListPage: View {
     }
 
     private func amountControls(_ item: ShoppingListItem) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Spacing.sm) {
             Button {
                 guard item.amountToBuy > 1 else { return }
-                Task {
-                    await shoppingListContext.updateItemAmount(item, amountToBuy: item.amountToBuy - 1)
-                }
+                Task { await shoppingListContext.updateItemAmount(item, amountToBuy: item.amountToBuy - 1) }
             } label: {
                 Image(systemName: "minus.circle.fill")
                     .font(.title3)
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(Color.appAccentWarm)
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("shopping.minus")
 
             Button {
-                Task {
-                    await shoppingListContext.updateItemAmount(item, amountToBuy: item.amountToBuy + 1)
-                }
+                Task { await shoppingListContext.updateItemAmount(item, amountToBuy: item.amountToBuy + 1) }
             } label: {
                 Image(systemName: "plus.circle.fill")
                     .font(.title3)
-                    .foregroundStyle(.green)
+                    .foregroundStyle(Color.appAccentFresh)
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("shopping.plus")
