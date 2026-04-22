@@ -1,8 +1,8 @@
 import SwiftUI
 
 struct AccountDetailsView: View {
-    @Environment(ProfileStore.self) private var profileContext
-    @Environment(AuthStore.self) private var authContext
+    @Environment(ProfileService.self) private var profileContext
+    @Environment(AuthService.self) private var authContext
 
     @Binding var profileImageRefreshToken: String
     @State private var showEditSheet = false
@@ -53,7 +53,7 @@ struct AccountDetailsView: View {
         .appGradientBackground()
         .onAppear {
             Task {
-                await profileContext.refreshCurrentUser(authContext: authContext)
+                await profileContext.refreshCurrentUser()
             }
             if !hasAutoPresented {
                 showEditSheet = true

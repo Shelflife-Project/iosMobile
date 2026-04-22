@@ -16,8 +16,8 @@ final class ProfilePageViewModel {
 }
 
 struct ProfilePage: View {
-    @Environment(ProfileStore.self) private var profileContext
-    @Environment(AuthStore.self) private var authContext
+    @Environment(ProfileService.self) private var profileContext
+    @Environment(AuthService.self) private var authContext
     @State private var viewModel = ProfilePageViewModel()
     @State private var profileImageRefreshToken = UUID().uuidString
     @State private var animateCrown = true
@@ -133,7 +133,7 @@ struct ProfilePage: View {
                     }
                 }
                 Task {
-                    await profileContext.refreshCurrentUser(authContext: authContext)
+                    await profileContext.refreshCurrentUser()
                 }
             }
             .coloredSheet(isPresented: $showEditAccountSheet) {
@@ -149,7 +149,7 @@ struct ProfilePage: View {
     }
 
     private func logout() {
-        profileContext.logout(authContext: authContext)
+        profileContext.logout()
     }
 }
 

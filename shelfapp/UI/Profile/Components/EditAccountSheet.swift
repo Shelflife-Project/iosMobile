@@ -2,8 +2,8 @@ import SwiftUI
 import PhotosUI
 
 struct EditAccountSheet: View {
-    @Environment(ProfileStore.self) private var profileContext
-    @Environment(AuthStore.self) private var authContext
+    @Environment(ProfileService.self) private var profileContext
+    @Environment(AuthService.self) private var authContext
 
     let user: User
     @Binding var isPresented: Bool
@@ -35,46 +35,50 @@ struct EditAccountSheet: View {
         return components?.url
     }
 
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section("Username") {
-                    TextField("Username", text: $username)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
+    private var formContent: some View {
+        Form {
+            Section("Username") {
+                TextField("Username", text: $username)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+            }
+
+            Section("Profile Picture") {
+                HStack {
+                    Text("Current")
+                    Spacer()
+                    if let selectedImageData,
+                       let selectedImage = UIImage(data: selectedImageData) {
+                        Image(uiImage: selectedImage)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 44, height: 44)
+                            .clipShape(RoundedRectangle(cornerRadius: 11))
+                    } else {
+                        RemoteImage(
+                            url: userPfpURL,
+                            placeholder: "person.crop.circle",
+                            size: 44
+                        )
+                    }
                 }
 
-                Section("Profile Picture") {
-                    HStack {
-                        Text("Current")
-                        Spacer()
-                        if let selectedImageData,
-                           let selectedImage = UIImage(data: selectedImageData) {
-                            Image(uiImage: selectedImage)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 44, height: 44)
-                                .clipShape(RoundedRectangle(cornerRadius: 11))
-                        } else {
-                            RemoteImage(
-                                url: userPfpURL,
-                                placeholder: "person.crop.circle",
-                                size: 44
-                            )
-                        }
-                    }
+                PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                    Label("Upload New Picture", systemImage: "photo")
+                }
 
-                    PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
-                        Label("Upload New Picture", systemImage: "photo")
-                    }
-
-                    if selectedImageData != nil {
-                        Text("New image selected")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                if selectedImageData != nil {
+                    Text("New image selected")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            formContent
             .scrollContentBackground(.hidden)
             .navigationTitle("Edit Account")
             .navigationBarTitleDisplayMode(.inline)
@@ -140,7 +144,7 @@ struct EditAccountSheet: View {
     }
 
     private func save() async {
-        guard let userId = user.serverId else { return }
+        guard let userId = user.id else { return }
 
         isSaving = true
         defer { isSaving = false }
@@ -148,8 +152,7 @@ struct EditAccountSheet: View {
         let didSave = await profileContext.updateAccount(
             userId: userId,
             username: username.trimmingCharacters(in: .whitespacesAndNewlines),
-            profileImageData: selectedImageData,
-            authContext: authContext
+            profileImageData: selectedImageData
         )
 
         if didSave {
