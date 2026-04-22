@@ -4,8 +4,8 @@ struct AddItemSheet: View {
     var storage: Storage
     @Binding var isPresented: Bool
     var onAdded: (() -> Void)? = nil
-    @Environment(ProductsStore.self) private var productsContext
-    @Environment(StorageDetailStore.self) private var storageDetailContext
+    @Environment(ProductService.self) private var productsContext
+    @Environment(StorageDetailService.self) private var storageDetailContext
     @State private var selectedProduct: Product?
     @State private var expirationDate: Date = Date().addingTimeInterval(7 * 24 * 3600)
 

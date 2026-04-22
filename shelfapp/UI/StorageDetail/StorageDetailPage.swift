@@ -26,12 +26,12 @@ final class StorageDetailPageViewModel {
 }
 
 struct StorageDetailPage: View {
-    @Environment(ProductsStore.self) private var productsContext
-    @Environment(StorageDetailStore.self) private var storageDetailContext
-    @Environment(StorageStore.self) private var storageContext
-    @Environment(ShoppingListStore.self) private var shoppingListContext
-    @Environment(NotificationsStore.self) private var notificationsContext
-    @Environment(ProfileStore.self) private var profileContext
+    @Environment(ProductService.self) private var productsContext
+    @Environment(StorageDetailService.self) private var storageDetailContext
+    @Environment(StorageService.self) private var storageContext
+    @Environment(ShoppingListService.self) private var shoppingListContext
+    @Environment(NotificationsService.self) private var notificationsContext
+    @Environment(ProfileService.self) private var profileContext
     var storage: Storage
     @State private var viewModel = StorageDetailPageViewModel()
     @State private var selectedItemForRunningLow: StorageItem? = nil
@@ -399,5 +399,7 @@ struct StorageDetailPage: View {
 }
 
 #Preview {
-    StorageDetailPage(storage: Storage(name: "Fridge"))
+    let mockStorageDTO = StorageDTO(id: 1, name: "Fridge", owner: UserDTO(id: 1, email: "test@example.com", username: "Test", admin: false), items: nil, members: nil)
+    let mockStorage = Storage(from: mockStorageDTO)
+    StorageDetailPage(storage: mockStorage)
 }
