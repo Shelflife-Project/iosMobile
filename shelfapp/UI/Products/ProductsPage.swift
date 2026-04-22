@@ -245,15 +245,13 @@ struct ProductsPage: View {
 
     private var searchSection: some View {
         Section {
-            HStack(spacing: 10) {
+            HStack(spacing: Spacing.sm) {
                 TextField("Search products...", text: Binding(
                     get: { viewModel.searchText },
                     set: { viewModel.setSearchText($0) }
                 ))
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
-                    .scrollContentBackground(.hidden)
-                    .appGradientBackground()
 
                 Button {
                     viewModel.showPaginationSettings = true
@@ -263,9 +261,11 @@ struct ProductsPage: View {
                         .symbolEffect(.pulse, isActive: viewModel.animateSettings)
                 }
                 .buttonStyle(.bordered)
+                .tint(Color.appPrimary)
                 .accessibilityLabel("Pagination settings")
             }
         }
+        .listRowBackground(Color.clear)
     }
 
     private var loadingSection: some View {
