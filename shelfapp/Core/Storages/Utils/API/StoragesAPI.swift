@@ -6,28 +6,55 @@ struct StoragesAPI {
     static func fetchAll(token: String, search: String? = nil, page: Int = 0, size: Int? = nil) async throws -> PaginatedResponseDTO<StorageDTO> {
         var url = URL(string: baseURL)!
         var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
-        
+
         var queryItems: [URLQueryItem] = [
             URLQueryItem(name: "page", value: "\(page)")
         ]
-        
+
         if let search = search, !search.isEmpty {
             queryItems.append(URLQueryItem(name: "search", value: search))
         }
         if let size = size {
             queryItems.append(URLQueryItem(name: "size", value: "\(size)"))
         }
-        
+
         components.queryItems = queryItems
         url = components.url!
-        
+
         var request = URLRequest(url: url)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        
+
         let (data, response) = try await URLSession.shared.data(for: request)
         try validateResponse(response)
-        
+
         return try JSONDecoder().decode(PaginatedResponseDTO<StorageDTO>.self, from: data)
+    }
+
+    static func fetchAllSummaries(token: String, search: String? = nil, page: Int = 0, size: Int? = nil) async throws -> PaginatedResponseDTO<StorageSummaryDTO> {
+        var url = URL(string: "\(baseURL)/summary")!
+        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
+
+        var queryItems: [URLQueryItem] = [
+            URLQueryItem(name: "page", value: "\(page)")
+        ]
+
+        if let search = search, !search.isEmpty {
+            queryItems.append(URLQueryItem(name: "search", value: search))
+        }
+        if let size = size {
+            queryItems.append(URLQueryItem(name: "size", value: "\(size)"))
+        }
+
+        components.queryItems = queryItems
+        url = components.url!
+
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validateResponse(response)
+
+        return try JSONDecoder().decode(PaginatedResponseDTO<StorageSummaryDTO>.self, from: data)
     }
     
     static func fetchById(token: String, id: Int) async throws -> StorageDTO {
@@ -172,7 +199,62 @@ struct StoragesAPI {
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        
+
+        let (_, response) = try await URLSession.shared.data(for: request)
+        try validateResponse(response)
+    }
+
+    // MARK: - Running Low Settings
+
+    static func fetchRunningLowSettings(token: String, storageId: Int) async throws -> [RunningLowSettingDTO] {
+        let url = URL(string: "\(baseURL)/\(storageId)/runninglowsettings")!
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validateResponse(response)
+
+        return try JSONDecoder().decode([RunningLowSettingDTO].self, from: data)
+    }
+
+    static func createRunningLowSetting(token: String, storageId: Int, productId: Int, threshold: Int) async throws -> RunningLowSettingDTO {
+        let url = URL(string: "\(baseURL)/\(storageId)/runninglowsettings")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        let payload = CreateRunningLowSettingRequestDTO(productId: productId, runningLow: threshold)
+        request.httpBody = try JSONEncoder().encode(payload)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validateResponse(response)
+
+        return try JSONDecoder().decode(RunningLowSettingDTO.self, from: data)
+    }
+
+    static func editRunningLowSetting(token: String, storageId: Int, settingId: Int, threshold: Int) async throws -> RunningLowSettingDTO {
+        let url = URL(string: "\(baseURL)/\(storageId)/runninglowsettings/\(settingId)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        let payload = EditRunningLowSettingRequestDTO(runningLow: threshold)
+        request.httpBody = try JSONEncoder().encode(payload)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validateResponse(response)
+
+        return try JSONDecoder().decode(RunningLowSettingDTO.self, from: data)
+    }
+
+    static func deleteRunningLowSetting(token: String, storageId: Int, settingId: Int) async throws {
+        let url = URL(string: "\(baseURL)/\(storageId)/runninglowsettings/\(settingId)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
         let (_, response) = try await URLSession.shared.data(for: request)
         try validateResponse(response)
     }

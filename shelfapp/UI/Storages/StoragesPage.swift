@@ -237,11 +237,12 @@ struct StoragesPage: View {
                 }
             }
         }
+        .listStyle(.plain)
     }
 
     private var searchSection: some View {
         Section {
-            HStack(spacing: 10) {
+            HStack(spacing: Spacing.sm) {
                 TextField("Search storages...", text: Binding(
                     get: { viewModel.searchText },
                     set: { viewModel.setSearchText($0) }
@@ -260,8 +261,9 @@ struct StoragesPage: View {
                 .tint(Color.appPrimary)
                 .accessibilityLabel("Pagination settings")
             }
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
         }
-        .listRowBackground(Color.clear)
     }
 
     private var emptyStateSection: some View {
@@ -284,6 +286,8 @@ struct StoragesPage: View {
             }
             .frame(maxWidth: .infinity, alignment: .center)
             .padding(.vertical, 8)
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
         }
     }
 
@@ -293,6 +297,7 @@ struct StoragesPage: View {
                 NavigationLink(destination: StorageDetailPage(storage: storage)) {
                     StorageListRow(storage: storage, isOwner: true)
                 }
+                .listCardBackground()
                 .trailingSwipeActions {
                     SwipeActionButton(
                         title: "Delete",
@@ -321,7 +326,9 @@ struct StoragesPage: View {
                     .symbolEffect(.wiggle, isActive: viewModel.animateBox)
                 Text("My Storages")
             }
-        }
+            .textCase(nil)
+        } .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
     }
 
     private var memberStoragesSection: some View {
@@ -330,6 +337,7 @@ struct StoragesPage: View {
                 NavigationLink(destination: StorageDetailPage(storage: storage)) {
                     StorageListRow(storage: storage, isOwner: false)
                 }
+                .listCardBackground()
                 .trailingSwipeActions {
                     SwipeActionButton(
                         title: "Leave",
@@ -358,9 +366,11 @@ struct StoragesPage: View {
                     .symbolEffect(.drawOn, isActive: viewModel.animateShared)
                 Text("Shared with Me")
             }
-        }
-    }
+            .textCase(nil)
+        } .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
 
+    }
 }
 
 private extension StoragesPage {

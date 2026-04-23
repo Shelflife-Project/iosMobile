@@ -2,6 +2,7 @@ import Foundation
 
 struct NotificationsAPI {
     private static let baseURL = "http://localhost:8080/api/storages"
+    private static let apiBaseURL = "http://localhost:8080/api"
     
     // Pending Invite operations
     static func fetchPendingInvites(token: String) async throws -> [StorageMemberDTO] {
@@ -25,6 +26,15 @@ struct NotificationsAPI {
         try validateResponse(response)
     }
     
+    static func fetchRunningLow(token: String) async throws -> [RunningLowResponseItemDTO] {
+        let url = URL(string: "\(apiBaseURL)/runninglow")!
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validateResponse(response)
+        return try JSONDecoder().decode([RunningLowResponseItemDTO].self, from: data)
+    }
+
     static func declineInvite(token: String, inviteId: Int) async throws {
         let url = URL(string: "\(baseURL)/invites/\(inviteId)")!
         var request = URLRequest(url: url)

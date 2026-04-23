@@ -25,7 +25,7 @@ struct AnimatedSecureTextField: View {
         }
         .font(AppFont.body())
         .padding(Spacing.md)
-        .softBordered(radius: CornerRadius.sm, fill: .appSurface)
+        .softBordered(radius: CornerRadius.sm, fill: .appCardSurface)
         .appShadowSubtle()
         .animation(.easeInOut(duration: 0.2), value: isSecure)
     }

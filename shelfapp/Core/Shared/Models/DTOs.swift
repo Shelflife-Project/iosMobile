@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 
 // MARK: - Shared Helper Types
 
@@ -220,7 +221,20 @@ struct StorageDTO: Codable {
         self.items = items
         self.members = members
     }
-    
+
+    func toDomain() -> Storage {
+        Storage(from: self)
+    }
+}
+
+struct StorageSummaryDTO: Codable {
+    let id: Int
+    let name: String
+    let owner: UserDTO?
+    let itemCount: Int
+    let shoppingItemCount: Int
+    let memberCount: Int
+
     func toDomain() -> Storage {
         Storage(from: self)
     }
@@ -336,6 +350,23 @@ struct ShoppingListItemDTO: Codable {
     }
 }
 
+// MARK: - Running Low DTOs
+
+struct RunningLowResponseItemDTO: Codable {
+    struct StorageRef: Codable {
+        let id: Int
+        let name: String
+    }
+    struct ProductRef: Codable {
+        let id: Int
+        let name: String
+    }
+    let storage: StorageRef
+    let product: ProductRef
+    let runningLowAt: Int
+    let amount: Int
+}
+
 // MARK: - Domain Models (for UI use)
 
 struct User: Identifiable, Codable, Hashable {
@@ -415,11 +446,36 @@ struct Product: Identifiable, Codable, Hashable {
 }
 
 struct RunningLowSetting: Identifiable, Codable, Hashable {
-    var id: Int { productId ?? -1 }
+    var id: Int { settingId ?? productId ?? -1 }
+    var settingId: Int?
     var productId: Int?
     var threshold: Int
 }
 
+struct RunningLowSettingDTO: Codable {
+    let id: Int
+    let product: ProductDTO?
+    let runningLow: Int
+
+    func toDomain() -> RunningLowSetting {
+        RunningLowSetting(
+            settingId: id,
+            productId: product?.id,
+            threshold: runningLow
+        )
+    }
+}
+
+struct CreateRunningLowSettingRequestDTO: Codable {
+    let productId: Int
+    let runningLow: Int
+}
+
+struct EditRunningLowSettingRequestDTO: Codable {
+    let runningLow: Int
+}
+
+@Observable
 final class Storage: Identifiable, Codable {
     var id: Int?
     var name: String
@@ -428,11 +484,18 @@ final class Storage: Identifiable, Codable {
     var members: [StorageMember]
     var shoppingItems: [ShoppingListItem]
     var runningLowSettings: [RunningLowSetting]
+    var itemCountOverride: Int?
+    var shoppingItemCountOverride: Int?
+    var memberCountOverride: Int?
 
     var serverId: Int? {
         get { id }
         set { id = newValue }
     }
+
+    var itemCount: Int { itemCountOverride ?? items.count }
+    var shoppingItemCount: Int { shoppingItemCountOverride ?? shoppingItems.count }
+    var memberCount: Int { memberCountOverride ?? members.count }
 
     init(
         name: String,
@@ -441,7 +504,10 @@ final class Storage: Identifiable, Codable {
         items: [StorageItem] = [],
         members: [StorageMember] = [],
         shoppingItems: [ShoppingListItem] = [],
-        runningLowSettings: [RunningLowSetting] = []
+        runningLowSettings: [RunningLowSetting] = [],
+        itemCountOverride: Int? = nil,
+        shoppingItemCountOverride: Int? = nil,
+        memberCountOverride: Int? = nil
     ) {
         self.id = serverId
         self.name = name
@@ -450,6 +516,9 @@ final class Storage: Identifiable, Codable {
         self.members = members
         self.shoppingItems = shoppingItems
         self.runningLowSettings = runningLowSettings
+        self.itemCountOverride = itemCountOverride
+        self.shoppingItemCountOverride = shoppingItemCountOverride
+        self.memberCountOverride = memberCountOverride
     }
 
     convenience init(from dto: StorageDTO) {
@@ -461,6 +530,21 @@ final class Storage: Identifiable, Codable {
             members: dto.members?.map { StorageMember(from: $0) } ?? [],
             shoppingItems: [],
             runningLowSettings: []
+        )
+    }
+
+    convenience init(from dto: StorageSummaryDTO) {
+        self.init(
+            name: dto.name,
+            owner: dto.owner.map { User(from: $0) },
+            serverId: dto.id,
+            items: [],
+            members: [],
+            shoppingItems: [],
+            runningLowSettings: [],
+            itemCountOverride: dto.itemCount,
+            shoppingItemCountOverride: dto.shoppingItemCount,
+            memberCountOverride: dto.memberCount
         )
     }
 }

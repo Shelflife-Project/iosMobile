@@ -32,7 +32,7 @@ final class StoragesStore {
 
         do {
             guard let token = sharedJWTToken else { throw APIError.unauthorized }
-            let result = try await StoragesAPI.fetchAll(token: token, search: searchText, page: currentPage, size: pageSize > 0 ? pageSize : nil)
+            let result = try await StoragesAPI.fetchAllSummaries(token: token, search: searchText, page: currentPage, size: pageSize > 0 ? pageSize : nil)
             storagesState = .loaded(result.data.map { $0.toDomain() })
             hasNext = result.hasNext
             hasPrevious = result.hasPrevious

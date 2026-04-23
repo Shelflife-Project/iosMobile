@@ -128,41 +128,59 @@ struct ProductsPage: View {
             )) {
                 NavigationStack {
                     Form {
-                        Picker("Page size", selection: Binding(
-                            get: { viewModel.pageSize },
-                            set: { viewModel.pageSize = $0 }
-                        )) {
-                            ForEach(viewModel.pageSizeOptions, id: \.self) { size in
-                                Text(viewModel.pageSizeLabel(size)).tag(size)
+                        Section("Page size") {
+                            Picker("Page size", selection: Binding(
+                                get: { viewModel.pageSize },
+                                set: { viewModel.pageSize = $0 }
+                            )) {
+                                ForEach(viewModel.pageSizeOptions, id: \.self) { size in
+                                    Text(viewModel.pageSizeLabel(size)).tag(size)
+                                }
                             }
                         }
 
-                        HStack {
-                            Button {
-                                Task { await productsContext.previousPage() }
-                            } label: {
-                                Label("Previous", systemImage: "chevron.left")
-                            }
-                            .buttonStyle(.bordered)
-                            .tint(!productsContext.hasPrevious || productsContext.isLoading || viewModel.pageSize == 0 ? .gray : .accentColor)
-                            .disabled(!productsContext.hasPrevious || productsContext.isLoading || viewModel.pageSize == 0)
+                        Section("Pagination") {
+                            HStack {
+                                Button {
+                                    Task { await productsContext.previousPage() }
+                                } label: {
+                                    Label("Previous", systemImage: "chevron.left")
+                                }
+                                .buttonStyle(.bordered)
+                                .tint(!productsContext.hasPrevious || productsContext.isLoading || viewModel.pageSize == 0 ? .gray : .accentColor)
+                                .disabled(!productsContext.hasPrevious || productsContext.isLoading || viewModel.pageSize == 0)
 
-                            Spacer()
-                            Text("Page \(productsContext.currentPage + 1)")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            Spacer()
+                                Spacer()
+                                Text("Page \(productsContext.currentPage + 1)")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Spacer()
 
-                            Button {
-                                Task { await productsContext.nextPage() }
-                            } label: {
-                                Label("Next", systemImage: "chevron.right")
+                                Button {
+                                    Task { await productsContext.nextPage() }
+                                } label: {
+                                    Label("Next", systemImage: "chevron.right")
+                                }
+                                .buttonStyle(.bordered)
+                                .tint(!productsContext.hasNext || productsContext.isLoading || viewModel.pageSize == 0 ? .gray : .accentColor)
+                                .disabled(!productsContext.hasNext || productsContext.isLoading || viewModel.pageSize == 0)
                             }
-                            .buttonStyle(.bordered)
-                            .tint(!productsContext.hasNext || productsContext.isLoading || viewModel.pageSize == 0 ? .gray : .accentColor)
-                            .disabled(!productsContext.hasNext || productsContext.isLoading || viewModel.pageSize == 0)
+                        }
+
+                        Section("Category") {
+                            Picker("Category", selection: Binding(
+                                get: { viewModel.selectedCategory },
+                                set: { viewModel.selectedCategory = $0 }
+                            )) {
+                                Text("All Categories").tag(Optional<String>(nil))
+                                ForEach(categories, id: \.self) { category in
+                                    Text(category).tag(Optional<String>(category))
+                                }
+                            }
                         }
                     }
+                    .scrollContentBackground(.hidden)
+                    .appGradientBackground()
                     .navigationTitle("List Settings")
                     .toolbar {
                         ToolbarItem(placement: .confirmationAction) {
@@ -229,10 +247,6 @@ struct ProductsPage: View {
                 emptyStateSection
             }
 
-            if !categories.isEmpty {
-                categoryFilterRow
-            }
-
             if !ownProducts.isEmpty {
                 ownProductsSection
             }
@@ -241,6 +255,7 @@ struct ProductsPage: View {
                 globalProductsSection
             }
         }
+        .listStyle(.plain)
     }
 
     private var searchSection: some View {
@@ -264,8 +279,9 @@ struct ProductsPage: View {
                 .tint(Color.appPrimary)
                 .accessibilityLabel("Pagination settings")
             }
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
         }
-        .listRowBackground(Color.clear)
     }
 
     private var loadingSection: some View {
@@ -295,22 +311,8 @@ struct ProductsPage: View {
         }
     }
 
-    private var categoryFilterRow: some View {
-        Picker("Category", selection: Binding(
-            get: { viewModel.selectedCategory },
-            set: { viewModel.selectedCategory = $0 }
-        )) {
-            Text("All Categories").tag(Optional<String>(nil))
-            ForEach(categories, id: \.self) { category in
-                Text(category).tag(Optional<String>(category))
-            }
-        }
-        .padding(.horizontal, 16)
-        .listRowInsets(EdgeInsets())
-    }
-
     private var ownProductsSection: some View {
-        Section("Own products") {
+        Section {
             ForEach(ownProducts) { product in
                 ProductListRow(product: product)
                     .trailingSwipeActions {
@@ -332,14 +334,28 @@ struct ProductsPage: View {
                         }
                     }
             }
+        } header: {
+            HStack(spacing: 6) {
+                Image(systemName: "person.fill")
+                    .foregroundStyle(Color.appPrimary)
+                Text("Own Products")
+            }
+            .textCase(nil)
         }
     }
 
     private var globalProductsSection: some View {
-        Section("Global products") {
+        Section {
             ForEach(globalProducts) { product in
                 ProductListRow(product: product)
             }
+        } header: {
+            HStack(spacing: 6) {
+                Image(systemName: "globe")
+                    .foregroundStyle(Color.appAccentFresh)
+                Text("Global Products")
+            }
+            .textCase(nil)
         }
     }
 

@@ -34,7 +34,7 @@ struct StorageListRow: View {
                     .font(AppFont.bodyEmphasized())
 
                 HStack(spacing: Spacing.md) {
-                    Label("\(storage.items.count) items", systemImage: "list.bullet")
+                    Label("\(storage.itemCount) items", systemImage: "list.bullet")
                         .font(AppFont.caption())
                         .foregroundStyle(Color.appSecondaryLabel)
 
@@ -48,8 +48,8 @@ struct StorageListRow: View {
 
             Spacer()
 
-            if storage.shoppingItems.count > 0 {
-                Text("\(storage.shoppingItems.count)")
+            if storage.shoppingItemCount > 0 {
+                Text("\(storage.shoppingItemCount)")
                     .font(AppFont.caption2())
                     .fontWeight(.bold)
                     .foregroundStyle(.white)

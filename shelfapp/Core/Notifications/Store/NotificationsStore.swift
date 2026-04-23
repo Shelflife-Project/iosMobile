@@ -40,12 +40,26 @@ final class NotificationsStore {
         notificationsState = .loading
         do {
             guard let token = sharedJWTToken else { throw APIError.unauthorized }
-            let invitesDtos = try await NotificationsAPI.fetchPendingInvites(token: token)
+            async let invitesFetch = NotificationsAPI.fetchPendingInvites(token: token)
+            async let runningLowFetch = NotificationsAPI.fetchRunningLow(token: token)
+            let (invitesDtos, runningLowDtos) = try await (invitesFetch, runningLowFetch)
+
             let fetchedInvites = invitesDtos.map { dto in
                 PendingInviteInfo(id: dto.id, storageName: dto.storage?.name ?? "Unknown", storageId: dto.storage?.id ?? 0, invitedBy: dto.user.username)
             }
-            // Note: running-low and about-to-expire endpoints not yet implemented (BP-2).
-            notificationsState = .loaded(NotificationsPayload(invites: fetchedInvites, runningLowItems: [], aboutToExpireItems: []))
+
+            let grouped = Dictionary(grouping: runningLowDtos) { $0.storage.id }
+            let fetchedRunningLow: [RunningLowNotification] = grouped.map { storageId, items in
+                RunningLowNotification(
+                    storageId: storageId,
+                    storageName: items.first?.storage.name ?? "Unknown",
+                    items: items.map { dto in
+                        RunningLowNotification.Item(id: dto.product.id, productName: dto.product.name, quantity: dto.amount)
+                    }
+                )
+            }
+
+            notificationsState = .loaded(NotificationsPayload(invites: fetchedInvites, runningLowItems: fetchedRunningLow, aboutToExpireItems: []))
         } catch {
             notificationsState = .failed(.serverMessage("Failed to fetch notifications: \(error.localizedDescription)"))
         }

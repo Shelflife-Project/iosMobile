@@ -39,6 +39,23 @@ struct NotificationsPage: View {
         }
     }
 
+    private func isExpiringItemInShoppingList(_ item: StorageItem) -> Bool {
+        guard let storageId = item.storage?.serverId,
+              let productId = item.product?.serverId else { return false }
+        return shoppingListContext.items.contains { shopping in
+            shopping.storage?.serverId == storageId &&
+            shopping.product?.serverId == productId
+        }
+    }
+
+    private func addExpiringItemToShoppingList(_ item: StorageItem) {
+        guard let storage = item.storage, let product = item.product else { return }
+        Task {
+            await shoppingListContext.addItem(storage: storage, product: product, amountToBuy: 1)
+            await shoppingListContext.fetchAggregated()
+        }
+    }
+
     private var pageContent: some View {
         Group {
             if notificationsContext.isLoading {
@@ -93,11 +110,12 @@ struct NotificationsPage: View {
     private var notificationsList: some View {
         List {
             if !sortedAboutToExpire.isEmpty {
-                Section("Expiring & Expired Items") {
+                Section {
                     ForEach(0..<sortedAboutToExpire.count, id: \.self) { index in
                         let item = sortedAboutToExpire[index]
                         let days = daysToExpire(item)
 
+                        let alreadyInList = isExpiringItemInShoppingList(item)
                         HStack(spacing: Spacing.md) {
                             RemoteImage(
                                 url: item.product?.serverId.flatMap { ResourceURLBuilder.productIconURL(productId: $0) },
@@ -139,13 +157,25 @@ struct NotificationsPage: View {
                             ) {
                                 Task { await deleteExpiredItem(item) }
                             }
+                            if !alreadyInList {
+                                SwipeActionButton(title: "Add to List", systemImage: "cart.badge.plus", tint: .green) {
+                                    addExpiringItemToShoppingList(item)
+                                }
+                            }
                         }
                     }
+                } header: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "clock.badge.exclamationmark")
+                            .foregroundStyle(.orange)
+                        Text("Expiring & Expired Items")
+                    }
+                    .textCase(nil)
                 }
             }
 
             if !notificationsContext.runningLowItems.isEmpty {
-                Section("Items Running Low") {
+                Section {
                     ForEach(notificationsContext.runningLowItems) { notification in
                         ForEach(notification.items) { lowItem in
                             let isInShoppingList = isLowItemAlreadyAddedToShoppingList(storageId: notification.storageId, lowItem: lowItem)
@@ -163,16 +193,6 @@ struct NotificationsPage: View {
                                     Text(notification.storageName)
                                         .font(AppFont.caption())
                                         .foregroundStyle(Color.appSecondaryLabel)
-
-                                    if isInShoppingList {
-                                        HStack(spacing: Spacing.xs) {
-                                            Image(systemName: "cart.fill")
-                                            Text("In shopping list")
-                                        }
-                                        .font(AppFont.caption2())
-                                        .foregroundStyle(Color.appAccentFresh)
-                                    }
-
                                     if lowItem.quantity <= 0 {
                                         Text("Out of stock")
                                             .font(AppFont.caption2())
@@ -206,11 +226,18 @@ struct NotificationsPage: View {
                             }
                         }
                     }
+                } header: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.appAccentWarm)
+                        Text("Items Running Low")
+                    }
+                    .textCase(nil)
                 }
             }
 
             if !notificationsContext.invites.isEmpty {
-                Section("Storage Invitations") {
+                Section {
                     ForEach(notificationsContext.invites) { invite in
                         HStack(spacing: Spacing.md) {
                             Image(systemName: "envelope.badge.fill")
@@ -239,9 +266,17 @@ struct NotificationsPage: View {
                             }
                         }
                     }
+                } header: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "envelope.badge.fill")
+                            .foregroundStyle(Color.appPrimary)
+                        Text("Storage Invitations")
+                    }
+                    .textCase(nil)
                 }
             }
         }
+        .listStyle(.plain)
         .scrollContentBackground(.hidden)
     }
 

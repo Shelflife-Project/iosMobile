@@ -14,7 +14,7 @@ struct LoginFormView: View {
                     .textContentType(.emailAddress)
                     .font(AppFont.body())
                     .padding(Spacing.md)
-                    .softBordered(radius: CornerRadius.sm, fill: .appSurface)
+                    .softBordered(radius: CornerRadius.sm, fill: .appCardSurface)
                     .appShadowSubtle()
 
                 AnimatedSecureTextField(text: $password, titleKey: "Password")

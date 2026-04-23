@@ -50,9 +50,10 @@ final class StorageDetailStore {
             guard let token = sharedJWTToken else { throw APIError.unauthorized }
             async let itemsFetch = StoragesAPI.fetchItems(token: token, storageId: storageId)
             async let shoppingFetch = StorageDetailAPI.fetchShoppingItems(token: token, storageId: storageId)
+            async let runningLowFetch = StoragesAPI.fetchRunningLowSettings(token: token, storageId: storageId)
             storage.items = try await itemsFetch.map { $0.toDomain() }
             storage.shoppingItems = try await shoppingFetch.map { $0.toDomain() }
-            storage.runningLowSettings = []
+            storage.runningLowSettings = try await runningLowFetch.map { $0.toDomain() }
             itemsState = .loaded(storage.items)
         } catch {
             itemsState = .failed(.serverMessage("Failed to load items: \(error.localizedDescription)"))
@@ -91,8 +92,9 @@ final class StorageDetailStore {
             guard let token = sharedJWTToken else { throw APIError.unauthorized }
             let formatter = ISO8601DateFormatter()
             formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-            _ = try await StorageDetailAPI.addItem(token: token, storageId: storageId, productId: productId, expiresAt: formatter.string(from: expiresAt))
-            await refreshStorage(storage)
+            let dto = try await StorageDetailAPI.addItem(token: token, storageId: storageId, productId: productId, expiresAt: formatter.string(from: expiresAt))
+            storage.items.append(StorageItem(from: dto))
+            itemsState = .loaded(storage.items)
         } catch {
             itemsState = .failed(.serverMessage("Failed to add item: \(error.localizedDescription)"))
         }
@@ -136,7 +138,8 @@ final class StorageDetailStore {
                 guard let token = sharedJWTToken else { throw APIError.unauthorized }
                 try await StorageDetailAPI.deleteItem(token: token, storageId: storageId, itemId: itemId)
             }
-            await loadItems(for: storage)
+            storage.items.removeAll { $0.id == item.id }
+            itemsState = .loaded(storage.items)
         } catch {
             itemsState = .failed(.serverMessage("Failed to delete item: \(error.localizedDescription)"))
         }
@@ -154,8 +157,9 @@ final class StorageDetailStore {
         guard let storageId = storage.id, let productId = product.id else { return }
         do {
             guard let token = sharedJWTToken else { throw APIError.unauthorized }
-            _ = try await StorageDetailAPI.addShoppingItem(token: token, storageId: storageId, productId: productId, amountToBuy: amount)
-            await loadItems(for: storage)
+            let dto = try await StorageDetailAPI.addShoppingItem(token: token, storageId: storageId, productId: productId, amountToBuy: amount)
+            storage.shoppingItems.append(ShoppingListItem(from: dto))
+            itemsState = .loaded(storage.items)
             if pushNotificationsEnabled {
                 await LocalNotificationService.shared.requestAuthorizationIfNeeded()
                 await LocalNotificationService.shared.postShoppingListAddedNotification(productName: product.name, storageName: storage.name)
@@ -172,7 +176,8 @@ final class StorageDetailStore {
         do {
             guard let token = sharedJWTToken else { throw APIError.unauthorized }
             try await StorageDetailAPI.deleteShoppingItem(token: token, storageId: storageId, itemId: itemId)
-            await loadItems(for: storage)
+            storage.shoppingItems.removeAll { $0.id == itemId }
+            itemsState = .loaded(storage.items)
         } catch {
             itemsState = .failed(.serverMessage("Failed to remove from shopping list: \(error.localizedDescription)"))
         }
@@ -182,8 +187,11 @@ final class StorageDetailStore {
         guard let storageId = storage.id, let itemId = item.id else { return }
         do {
             guard let token = sharedJWTToken else { throw APIError.unauthorized }
-            _ = try await StorageDetailAPI.updateShoppingItem(token: token, storageId: storageId, itemId: itemId, amountToBuy: amountToBuy)
-            await loadItems(for: storage)
+            let dto = try await StorageDetailAPI.updateShoppingItem(token: token, storageId: storageId, itemId: itemId, amountToBuy: amountToBuy)
+            if let index = storage.shoppingItems.firstIndex(where: { $0.id == itemId }) {
+                storage.shoppingItems[index] = ShoppingListItem(from: dto)
+            }
+            itemsState = .loaded(storage.items)
         } catch {
             itemsState = .failed(.serverMessage("Failed to update shopping item: \(error.localizedDescription)"))
         }
@@ -195,20 +203,48 @@ final class StorageDetailStore {
             guard let token = sharedJWTToken else { throw APIError.unauthorized }
             // Note: Complete shopping item endpoint not yet implemented (BP-3). Deletes instead.
             try await StorageDetailAPI.deleteShoppingItem(token: token, storageId: storageId, itemId: itemId)
-            await loadItems(for: storage)
+            storage.shoppingItems.removeAll { $0.id == itemId }
+            itemsState = .loaded(storage.items)
         } catch {
             itemsState = .failed(.serverMessage("Failed to complete shopping item: \(error.localizedDescription)"))
         }
     }
 
     func setRunningLow(product: Product, in storage: Storage, threshold: Int) async {
-        // Note: Running low settings endpoint not yet implemented (BP-1).
-        membersState = .failed(.serverMessage("Running low settings not yet implemented"))
+        guard let storageId = storage.id, let productId = product.id else { return }
+        do {
+            guard let token = sharedJWTToken else { throw APIError.unauthorized }
+            let existing = storage.runningLowSettings.first { $0.productId == productId }
+            let dto: RunningLowSettingDTO
+            if let settingId = existing?.settingId {
+                dto = try await StoragesAPI.editRunningLowSetting(token: token, storageId: storageId, settingId: settingId, threshold: threshold)
+            } else {
+                dto = try await StoragesAPI.createRunningLowSetting(token: token, storageId: storageId, productId: productId, threshold: threshold)
+            }
+            let updated = dto.toDomain()
+            if let index = storage.runningLowSettings.firstIndex(where: { $0.productId == productId }) {
+                storage.runningLowSettings[index] = updated
+            } else {
+                storage.runningLowSettings.append(updated)
+            }
+            itemsState = .loaded(storage.items)
+        } catch {
+            itemsState = .failed(.serverMessage("Failed to set running low: \(error.localizedDescription)"))
+        }
     }
 
     func removeRunningLow(product: Product, from storage: Storage) async {
-        // Note: Running low settings endpoint not yet implemented (BP-1).
-        membersState = .failed(.serverMessage("Running low settings not yet implemented"))
+        guard let storageId = storage.id, let productId = product.id else { return }
+        guard let setting = storage.runningLowSettings.first(where: { $0.productId == productId }),
+              let settingId = setting.settingId else { return }
+        do {
+            guard let token = sharedJWTToken else { throw APIError.unauthorized }
+            try await StoragesAPI.deleteRunningLowSetting(token: token, storageId: storageId, settingId: settingId)
+            storage.runningLowSettings.removeAll { $0.productId == productId }
+            itemsState = .loaded(storage.items)
+        } catch {
+            itemsState = .failed(.serverMessage("Failed to remove running low: \(error.localizedDescription)"))
+        }
     }
 
     private func seedOwnerAsMemberIfNeeded(_ storage: Storage) {

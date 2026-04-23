@@ -14,7 +14,7 @@ struct SignupFormView: View {
                     .textInputAutocapitalization(.never)
                     .font(AppFont.body())
                     .padding(Spacing.md)
-                    .softBordered(radius: CornerRadius.sm, fill: .appSurface)
+                    .softBordered(radius: CornerRadius.sm, fill: .appCardSurface)
                     .appShadowSubtle()
 
                 TextField("Email", text: $email)
@@ -23,7 +23,7 @@ struct SignupFormView: View {
                     .textContentType(.emailAddress)
                     .font(AppFont.body())
                     .padding(Spacing.md)
-                    .softBordered(radius: CornerRadius.sm, fill: .appSurface)
+                    .softBordered(radius: CornerRadius.sm, fill: .appCardSurface)
                     .appShadowSubtle()
 
                 AnimatedSecureTextField(text: $password, titleKey: "Password")

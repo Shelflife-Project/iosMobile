@@ -69,29 +69,8 @@ final class ShoppingListStore {
         do {
             guard let itemId = item.id else { throw APIError.invalidURL }
             guard let token = sharedJWTToken else { throw APIError.unauthorized }
-            do {
-                let storageId = try await resolveStorageId(for: item)
-                _ = try await ShoppingListAPI.deleteItem(token: token, storageId: storageId, itemId: itemId)
-            } catch APIError.serverError(let statusCode) where statusCode == 403 {
-                let refreshed = try await refreshedItem(for: itemId)
-                let storageId = try await resolveStorageId(for: refreshed.toDomain())
-                if let productId = refreshed.product?.id {
-                    let amount = max(1, refreshed.amountToBuy)
-                    let expiresAtStr: String = {
-                        guard let delta = refreshed.product?.expirationDaysDelta, delta > 0 else { return "" }
-                        let expiry = Calendar.current.date(byAdding: .day, value: delta, to: Date()) ?? Date()
-                        let formatter = ISO8601DateFormatter()
-                        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-                        return formatter.string(from: expiry)
-                    }()
-                    for _ in 0..<amount {
-                        _ = try await StoragesAPI.addItem(token: token, storageId: storageId, productId: productId, expiresAt: expiresAtStr)
-                    }
-                    try await ShoppingListAPI.deleteItem(token: token, storageId: storageId, itemId: itemId)
-                } else {
-                    throw APIError.invalidURL
-                }
-            }
+            let storageId = try await resolveStorageId(for: item)
+            try await ShoppingListAPI.addItemToStorage(token: token, storageId: storageId, itemId: itemId)
             let dtos = try await ShoppingListAPI.fetchAggregated(token: token)
             itemsState = .loaded(dtos.map { $0.toDomain() })
         } catch {
@@ -123,13 +102,6 @@ final class ShoppingListStore {
         throw APIError.invalidURL
     }
 
-    private func refreshedItem(for itemId: Int) async throws -> ShoppingListItemDTO {
-        guard let token = sharedJWTToken else { throw APIError.unauthorized }
-        let latest = try await ShoppingListAPI.fetchAggregated(token: token)
-        itemsState = .loaded(latest.map { $0.toDomain() })
-        guard let refreshed = latest.first(where: { $0.id == itemId }) else { throw APIError.notFound }
-        return refreshed
-    }
 }
 
 typealias ShoppingListService = ShoppingListStore

@@ -43,7 +43,13 @@ struct StorageDetailPage: View {
     }
 
     var body: some View {
-        detailList
+        VStack(spacing: 0) {
+            storageHeaderCard
+                .padding(.horizontal, Spacing.base)
+                .padding(.top, Spacing.sm)
+                .padding(.bottom, Spacing.md)
+            detailList
+        }
         .scrollContentBackground(.hidden)
         .appGradientBackground()
         .navigationBarTitleDisplayMode(.inline)
@@ -58,6 +64,9 @@ struct StorageDetailPage: View {
                     if isOwner {
                         Button(action: { viewModel.showInviteSheet = true }) {
                             Label("Invite Member", systemImage: "person.badge.plus")
+                        }
+                        Button(action: { showEditStorage = true }) {
+                            Label("Edit Storage", systemImage: "pencil")
                         }
                     }
                 } label: {
@@ -140,56 +149,29 @@ struct StorageDetailPage: View {
 
     // MARK: - Sections
 
-    private var storageHeaderRow: some View {
-        HStack(spacing: Spacing.md) {
-            Image(systemName: "shippingbox.fill")
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundStyle(Color.appPrimary)
+    private var storageHeaderCard: some View {
+        AppCard(style: .prominent) {
+            HStack(spacing: Spacing.md) {
+                Image(systemName: "shippingbox.fill")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(Color.appPrimary)
 
-            VStack(alignment: .leading, spacing: Spacing.xxs) {
-                Text(storage.name)
-                    .font(AppFont.headline())
-                if let owner = storage.owner {
-                    Text("by \(owner.username)")
-                        .font(AppFont.caption())
-                        .foregroundStyle(Color.appSecondaryLabel)
+                VStack(alignment: .leading, spacing: Spacing.xxs) {
+                    Text(storage.name)
+                        .font(AppFont.headline())
+                    if let owner = storage.owner {
+                        Text("by \(owner.username)")
+                            .font(AppFont.caption())
+                            .foregroundStyle(Color.appSecondaryLabel)
+                    }
                 }
+                Spacer()
             }
-            Spacer()
-        }
-        .padding(.vertical, Spacing.sm)
-        .listCardBackground(accent: .appPrimary)
-        .contentShape(Rectangle())
-        .trailingSwipeActions {
-            storageSwipeActions
-        }
-    }
-
-    @ViewBuilder
-    private var storageSwipeActions: some View {
-        SwipeActionButton(
-            title: "Edit",
-            systemImage: "pencil",
-            tint: .blue
-        ) {
-            showEditStorage = true
-        }
-
-        SwipeActionButton(
-            title: "Delete",
-            systemImage: "trash",
-            tint: .red,
-            role: .destructive
-        ) {
-            deleteStorage()
         }
     }
 
     private var detailList: some View {
         List {
-            // Storage header with swipe actions
-            storageHeaderRow
-
             // Inventory items in this storage.
             if !storage.items.isEmpty {
                 itemsSection
@@ -351,12 +333,6 @@ struct StorageDetailPage: View {
     private func cancelInvite(_ invite: StorageMemberInfo) {
         Task {
             await storageDetailContext.cancelInvite(invite, from: storage)
-        }
-    }
-
-    private func deleteStorage() {
-        Task {
-            await storageContext.delete(storage)
         }
     }
 

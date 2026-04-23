@@ -27,9 +27,9 @@ enum CornerRadius {
 // MARK: - Border
 
 enum BorderWidth {
-    static let hairline: CGFloat = 1
-    static let regular: CGFloat = 1.5
-    static let thick: CGFloat = 2.5
+    static let hairline: CGFloat = 2
+    static let regular: CGFloat = 2.5
+    static let thick: CGFloat = 3.5
 }
 
 // MARK: - Typography — all rounded for a warm, friendly feel
@@ -136,15 +136,22 @@ extension Color {
 }
 
 // MARK: - List card row modifier
-// Edge-to-edge appCardSurface background with 2 pt row gaps and standard horizontal content padding.
-// No border, no radius — clean flat rows that float on the gradient.
+// Each row is rendered as an individual card matching the home-screen StatCard style:
+// rounded corners, accent-tinted border, soft shadow, gradient visible between rows.
 
 extension View {
     func listCardBackground(accent: Color = .appPrimary) -> some View {
         self
             .padding(.horizontal, Spacing.base)
-            .listRowBackground(Color.appCardSurface)
+            .background(Color.appCardSurface)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
+                    .stroke(accent.opacity(0.25), lineWidth: BorderWidth.hairline)
+            )
+            .appShadow(radius: 8, y: 2, opacity: 0.06)
+            .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets(top: 1, leading: 0, bottom: 1, trailing: 0))
+            .listRowInsets(EdgeInsets(top: 5, leading: 12, bottom: 5, trailing: 12))
     }
 }
