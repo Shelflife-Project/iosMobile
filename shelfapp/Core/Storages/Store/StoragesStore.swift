@@ -26,7 +26,7 @@ final class StoragesStore {
     init() {}
 
     func fetch(search: String? = nil, page: Int? = nil, size: Int? = nil) async {
-        storagesState = .loading
+        if storagesState.value == nil { storagesState = .loading }
         if let search { searchText = search }
         if let page { currentPage = max(0, page) }
         if let size { pageSize = max(0, size) }

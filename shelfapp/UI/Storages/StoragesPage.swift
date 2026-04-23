@@ -281,11 +281,6 @@ struct StoragesPage: View {
                 Text("Create your first storage to get started")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Button(action: { viewModel.showCreateForm = true }) {
-                    Label("Create Storage", systemImage: "plus.circle.fill")
-                        .fontWeight(.semibold)
-                }
-                .buttonStyle(.borderedProminent)
             }
             .frame(maxWidth: .infinity, alignment: .center)
             .padding(.vertical, 8)

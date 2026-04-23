@@ -91,5 +91,5 @@
 - Osszes teszteset: 75
 - Atment: [73]
 - Elbukott: [2]
-- Blokkolo hiba: [N]
+- Blokkolo hiba: [N]    
 - Megjegyzes: [Fixelve_lettek_a_problémák]
