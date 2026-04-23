@@ -59,7 +59,6 @@ struct StorageListRow: View {
             }
         }
         .padding(.vertical, Spacing.sm)
-        .listCardBackground()
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                 withAnimation(.easeInOut(duration: 0.5)) { animateIcon = false }

@@ -376,7 +376,6 @@ struct StorageDetailPage: View {
     }
 
     private func refreshSharedContexts() async {
-        await storageContext.fetch()
         await shoppingListContext.fetchAggregated()
         await notificationsContext.refreshAll()
     }
