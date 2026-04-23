@@ -10,15 +10,16 @@ final class StoragesStore {
     var pageSize = 0
     var hasNext = false
     var hasPrevious = false
+    var actionError: String?
 
     // Convenience accessors for pages
     var storages: [Storage] { storagesState.value ?? [] }
     var isLoading: Bool { storagesState.isLoading }
     var errorMessage: String? {
-        get { storagesState.error?.localizedDescription }
+        get { actionError ?? storagesState.error?.localizedDescription }
         set {
-            if let msg = newValue { storagesState = .failed(.serverMessage(msg)) }
-            else if case .failed = storagesState { storagesState = .idle }
+            actionError = newValue
+            if newValue == nil, case .failed = storagesState { storagesState = .idle }
         }
     }
 
@@ -50,7 +51,7 @@ final class StoragesStore {
             _ = try await StoragesAPI.create(token: token, name: name)
             await fetch(page: 0)
         } catch {
-            storagesState = .failed(.serverMessage("Failed to create storage: \(error.localizedDescription)"))
+            actionError = "Failed to create storage: \(error.localizedDescription)"
         }
     }
 
@@ -61,7 +62,7 @@ final class StoragesStore {
             _ = try await StoragesAPI.updateName(token: token, id: storageId, name: name)
             await fetch(page: currentPage)
         } catch {
-            storagesState = .failed(.serverMessage("Failed to update storage: \(error.localizedDescription)"))
+            actionError = "Failed to update storage: \(error.localizedDescription)"
         }
     }
 
@@ -76,7 +77,7 @@ final class StoragesStore {
                 await fetch(page: 0)
             }
         } catch {
-            storagesState = .failed(.serverMessage("Failed to delete storage: \(error.localizedDescription)"))
+            actionError = "Failed to delete storage: \(error.localizedDescription)"
         }
     }
 

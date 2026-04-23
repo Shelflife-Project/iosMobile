@@ -10,14 +10,15 @@ final class ProductsStore {
     var pageSize = 0
     var hasNext = false
     var hasPrevious = false
+    var actionError: String?
 
     var products: [Product] { productsState.value ?? [] }
     var isLoading: Bool { productsState.isLoading }
     var errorMessage: String? {
-        get { productsState.error?.localizedDescription }
+        get { actionError ?? productsState.error?.localizedDescription }
         set {
-            if let msg = newValue { productsState = .failed(.serverMessage(msg)) }
-            else if case .failed = productsState { productsState = .idle }
+            actionError = newValue
+            if newValue == nil, case .failed = productsState { productsState = .idle }
         }
     }
 
@@ -55,7 +56,7 @@ final class ProductsStore {
                 productsState = .loaded(list)
             }
         } catch {
-            productsState = .failed(.serverMessage("Could not delete item"))
+            actionError = "Could not delete item"
         }
     }
 
@@ -67,7 +68,7 @@ final class ProductsStore {
             list.append(created.toDomain())
             productsState = .loaded(list)
         } catch {
-            productsState = .failed(.serverMessage("Failed to create product"))
+            actionError = "Failed to create product"
         }
     }
 
@@ -81,17 +82,17 @@ final class ProductsStore {
                 productsState = .loaded(list)
             }
         } catch {
-            productsState = .failed(.serverMessage("Failed to update product"))
+            actionError = "Failed to update product"
         }
     }
 
     func update(product: Product, name: String, category: String, expirationDaysDelta: Int, barcode: String?) async {
-        guard let id = product.id else { productsState = .failed(.serverMessage("Invalid product id")); return }
+        guard let id = product.id else { actionError = "Invalid product id"; return }
         await update(id: id, name: name, category: category, expirationDaysDelta: expirationDaysDelta, barcode: barcode)
     }
 
     func delete(_ product: Product) async {
-        guard let id = product.id else { productsState = .failed(.serverMessage("Invalid product id")); return }
+        guard let id = product.id else { actionError = "Invalid product id"; return }
         await remove(id: id)
     }
 

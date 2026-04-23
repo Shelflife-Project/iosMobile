@@ -138,6 +138,10 @@ struct StorageDetailPage: View {
         } message: {
             Text(storageDetailContext.errorMessage ?? "An unknown error occurred")
         }
+        .refreshable {
+            await storageDetailContext.fetchMembers(for: storage)
+            await storageDetailContext.loadItems(for: storage)
+        }
         .onAppear {
             Task {
                 await storageDetailContext.fetchMembers(for: storage)

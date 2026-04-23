@@ -204,6 +204,9 @@ struct ProductsPage: View {
             } message: {
                 Text(productsContext.errorMessage ?? "An unknown error occurred")
             }
+            .refreshable {
+                await productsContext.fetch(search: viewModel.searchText, page: 0, size: viewModel.pageSize)
+            }
             .onAppear {
                 viewModel.searchText = productsContext.searchText
                 viewModel.debouncedSearchText = productsContext.searchText
@@ -291,6 +294,8 @@ struct ProductsPage: View {
                 ProgressView()
                 Spacer()
             }
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
         }
     }
 
@@ -306,6 +311,8 @@ struct ProductsPage: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
             .frame(maxWidth: .infinity, alignment: .center)
             .padding(.vertical, 8)
         }

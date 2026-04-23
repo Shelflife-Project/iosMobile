@@ -111,8 +111,7 @@ struct NotificationsPage: View {
         List {
             if !sortedAboutToExpire.isEmpty {
                 Section {
-                    ForEach(0..<sortedAboutToExpire.count, id: \.self) { index in
-                        let item = sortedAboutToExpire[index]
+                    ForEach(sortedAboutToExpire) { item in
                         let days = daysToExpire(item)
 
                         let alreadyInList = isExpiringItemInShoppingList(item)

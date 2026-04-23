@@ -6,6 +6,7 @@ import Observation
 final class StorageDetailStore {
     var membersState: Loadable<[StorageMemberInfo]> = .idle
     var itemsState: Loadable<[StorageItem]> = .idle
+    var actionError: String?
 
     var members: [StorageMemberInfo] { membersState.value ?? [] }
     var isLoadingMembers: Bool { membersState.isLoading }
@@ -13,11 +14,10 @@ final class StorageDetailStore {
 
     var isLoading: Bool { membersState.isLoading || itemsState.isLoading }
     var errorMessage: String? {
-        get { membersState.error?.localizedDescription ?? itemsState.error?.localizedDescription }
+        get { actionError ?? membersState.error?.localizedDescription ?? itemsState.error?.localizedDescription }
         set {
-            if let msg = newValue {
-                membersState = .failed(.serverMessage(msg))
-            } else {
+            actionError = newValue
+            if newValue == nil {
                 if case .failed = membersState { membersState = .idle }
                 if case .failed = itemsState { itemsState = .idle }
             }
@@ -96,7 +96,7 @@ final class StorageDetailStore {
             storage.items.append(StorageItem(from: dto))
             itemsState = .loaded(storage.items)
         } catch {
-            itemsState = .failed(.serverMessage("Failed to add item: \(error.localizedDescription)"))
+            actionError = "Failed to add item: \(error.localizedDescription)"
         }
     }
 
@@ -110,7 +110,7 @@ final class StorageDetailStore {
                 membersState = .loaded(list)
             }
         } catch {
-            membersState = .failed(.serverMessage("Failed to remove member: \(error.localizedDescription)"))
+            actionError = "Failed to remove member: \(error.localizedDescription)"
         }
     }
 
@@ -124,7 +124,7 @@ final class StorageDetailStore {
             list.append(info)
             membersState = .loaded(list)
         } catch {
-            membersState = .failed(.serverMessage("Failed to invite member: \(error.localizedDescription)"))
+            actionError = "Failed to invite member: \(error.localizedDescription)"
         }
     }
 
@@ -141,7 +141,7 @@ final class StorageDetailStore {
             storage.items.removeAll { $0.id == item.id }
             itemsState = .loaded(storage.items)
         } catch {
-            itemsState = .failed(.serverMessage("Failed to delete item: \(error.localizedDescription)"))
+            actionError = "Failed to delete item: \(error.localizedDescription)"
         }
     }
 
@@ -165,7 +165,7 @@ final class StorageDetailStore {
                 await LocalNotificationService.shared.postShoppingListAddedNotification(productName: product.name, storageName: storage.name)
             }
         } catch {
-            itemsState = .failed(.serverMessage("Failed to add to shopping list: \(error.localizedDescription)"))
+            actionError = "Failed to add to shopping list: \(error.localizedDescription)"
         }
     }
 
@@ -179,7 +179,7 @@ final class StorageDetailStore {
             storage.shoppingItems.removeAll { $0.id == itemId }
             itemsState = .loaded(storage.items)
         } catch {
-            itemsState = .failed(.serverMessage("Failed to remove from shopping list: \(error.localizedDescription)"))
+            actionError = "Failed to remove from shopping list: \(error.localizedDescription)"
         }
     }
 
@@ -193,7 +193,7 @@ final class StorageDetailStore {
             }
             itemsState = .loaded(storage.items)
         } catch {
-            itemsState = .failed(.serverMessage("Failed to update shopping item: \(error.localizedDescription)"))
+            actionError = "Failed to update shopping item: \(error.localizedDescription)"
         }
     }
 
@@ -206,7 +206,7 @@ final class StorageDetailStore {
             storage.shoppingItems.removeAll { $0.id == itemId }
             itemsState = .loaded(storage.items)
         } catch {
-            itemsState = .failed(.serverMessage("Failed to complete shopping item: \(error.localizedDescription)"))
+            actionError = "Failed to complete shopping item: \(error.localizedDescription)"
         }
     }
 
@@ -229,7 +229,7 @@ final class StorageDetailStore {
             }
             itemsState = .loaded(storage.items)
         } catch {
-            itemsState = .failed(.serverMessage("Failed to set running low: \(error.localizedDescription)"))
+            actionError = "Failed to set running low: \(error.localizedDescription)"
         }
     }
 
@@ -243,7 +243,7 @@ final class StorageDetailStore {
             storage.runningLowSettings.removeAll { $0.productId == productId }
             itemsState = .loaded(storage.items)
         } catch {
-            itemsState = .failed(.serverMessage("Failed to remove running low: \(error.localizedDescription)"))
+            actionError = "Failed to remove running low: \(error.localizedDescription)"
         }
     }
 

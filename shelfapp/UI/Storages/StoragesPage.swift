@@ -193,6 +193,9 @@ struct StoragesPage: View {
             } message: {
                 Text(storageContext.errorMessage ?? "An unknown error occurred")
             }
+            .refreshable {
+                await storageContext.fetch(search: viewModel.searchText, page: 0, size: viewModel.pageSize)
+            }
             .onAppear {
                 viewModel.triggerAnimations()
                 viewModel.searchText = storageContext.searchText

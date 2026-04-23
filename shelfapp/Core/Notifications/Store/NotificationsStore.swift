@@ -5,6 +5,7 @@ import Observation
 @Observable
 final class NotificationsStore {
     var notificationsState: Loadable<NotificationsPayload> = .idle
+    var actionError: String?
 
     var invites: [PendingInviteInfo] { notificationsState.value?.invites ?? [] }
     var runningLowItems: [RunningLowNotification] { notificationsState.value?.runningLowItems ?? [] }
@@ -12,10 +13,10 @@ final class NotificationsStore {
 
     var isLoading: Bool { notificationsState.isLoading }
     var errorMessage: String? {
-        get { notificationsState.error?.localizedDescription }
+        get { actionError ?? notificationsState.error?.localizedDescription }
         set {
-            if let msg = newValue { notificationsState = .failed(.serverMessage(msg)) }
-            else if case .failed = notificationsState { notificationsState = .idle }
+            actionError = newValue
+            if newValue == nil, case .failed = notificationsState { notificationsState = .idle }
         }
     }
 
@@ -32,7 +33,7 @@ final class NotificationsStore {
             payload.invites = newInvites
             notificationsState = .loaded(payload)
         } catch {
-            notificationsState = .failed(.serverMessage("Failed to fetch invites: \(error.localizedDescription)"))
+            actionError = "Failed to fetch invites: \(error.localizedDescription)"
         }
     }
 
@@ -42,7 +43,8 @@ final class NotificationsStore {
             guard let token = sharedJWTToken else { throw APIError.unauthorized }
             async let invitesFetch = NotificationsAPI.fetchPendingInvites(token: token)
             async let runningLowFetch = NotificationsAPI.fetchRunningLow(token: token)
-            let (invitesDtos, runningLowDtos) = try await (invitesFetch, runningLowFetch)
+            async let aboutToExpireFetch = NotificationsAPI.fetchAboutToExpire(token: token)
+            let (invitesDtos, runningLowDtos, aboutToExpireDtos) = try await (invitesFetch, runningLowFetch, aboutToExpireFetch)
 
             let fetchedInvites = invitesDtos.map { dto in
                 PendingInviteInfo(id: dto.id, storageName: dto.storage?.name ?? "Unknown", storageId: dto.storage?.id ?? 0, invitedBy: dto.user.username)
@@ -59,7 +61,13 @@ final class NotificationsStore {
                 )
             }
 
-            notificationsState = .loaded(NotificationsPayload(invites: fetchedInvites, runningLowItems: fetchedRunningLow, aboutToExpireItems: []))
+            let fetchedAboutToExpire = aboutToExpireDtos.map { $0.toDomain() }
+
+            notificationsState = .loaded(NotificationsPayload(
+                invites: fetchedInvites,
+                runningLowItems: fetchedRunningLow,
+                aboutToExpireItems: fetchedAboutToExpire
+            ))
         } catch {
             notificationsState = .failed(.serverMessage("Failed to fetch notifications: \(error.localizedDescription)"))
         }
@@ -76,7 +84,7 @@ final class NotificationsStore {
             notificationsState = .loaded(payload)
             await storageService.fetch()
         } catch {
-            notificationsState = .failed(.serverMessage("Failed to accept invite: \(error.localizedDescription)"))
+            actionError = "Failed to accept invite: \(error.localizedDescription)"
         }
     }
 
@@ -88,7 +96,7 @@ final class NotificationsStore {
             payload.invites.removeAll { $0.id == invite.id }
             notificationsState = .loaded(payload)
         } catch {
-            notificationsState = .failed(.serverMessage("Failed to decline invite: \(error.localizedDescription)"))
+            actionError = "Failed to decline invite: \(error.localizedDescription)"
         }
     }
 
@@ -98,7 +106,7 @@ final class NotificationsStore {
             _ = try await ShoppingListAPI.addItem(token: token, storageId: storageId, productId: productId, amountToBuy: 1)
             await shoppingService.fetchAggregated()
         } catch {
-            notificationsState = .failed(.serverMessage("Failed to add running low item to shopping list: \(error.localizedDescription)"))
+            actionError = "Failed to add running low item to shopping list: \(error.localizedDescription)"
         }
     }
 
@@ -107,10 +115,10 @@ final class NotificationsStore {
             guard let token = sharedJWTToken else { throw APIError.unauthorized }
             try await StoragesAPI.deleteItem(token: token, storageId: storageId, itemId: itemId)
             var payload = notificationsState.value ?? NotificationsPayload()
-            payload.aboutToExpireItems = []
+            payload.aboutToExpireItems.removeAll { $0.id == itemId }
             notificationsState = .loaded(payload)
         } catch {
-            notificationsState = .failed(.serverMessage("Failed to delete item: \(error.localizedDescription)"))
+            actionError = "Failed to delete item: \(error.localizedDescription)"
         }
     }
 }

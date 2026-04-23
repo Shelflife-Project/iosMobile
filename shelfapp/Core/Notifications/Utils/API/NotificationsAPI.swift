@@ -35,6 +35,15 @@ struct NotificationsAPI {
         return try JSONDecoder().decode([RunningLowResponseItemDTO].self, from: data)
     }
 
+    static func fetchAboutToExpire(token: String) async throws -> [StorageItemDTO] {
+        let url = URL(string: "\(apiBaseURL)/abouttoexpire")!
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        let (data, response) = try await URLSession.shared.data(for: request)
+        try validateResponse(response)
+        return try JSONDecoder().decode([StorageItemDTO].self, from: data)
+    }
+
     static func declineInvite(token: String, inviteId: Int) async throws {
         let url = URL(string: "\(baseURL)/invites/\(inviteId)")!
         var request = URLRequest(url: url)

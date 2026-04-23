@@ -5,14 +5,15 @@ import Observation
 @Observable
 final class ShoppingListStore {
     var itemsState: Loadable<[ShoppingListItem]> = .idle
+    var actionError: String?
 
     var items: [ShoppingListItem] { itemsState.value ?? [] }
     var isLoading: Bool { itemsState.isLoading }
     var errorMessage: String? {
-        get { itemsState.error?.localizedDescription }
+        get { actionError ?? itemsState.error?.localizedDescription }
         set {
-            if let msg = newValue { itemsState = .failed(.serverMessage(msg)) }
-            else if case .failed = itemsState { itemsState = .idle }
+            actionError = newValue
+            if newValue == nil, case .failed = itemsState { itemsState = .idle }
         }
     }
 
@@ -48,7 +49,7 @@ final class ShoppingListStore {
             let dtos = try await ShoppingListAPI.fetchAggregated(token: token)
             itemsState = .loaded(dtos.map { $0.toDomain() })
         } catch {
-            itemsState = .failed(.serverMessage("Failed to add shopping item: \(error.localizedDescription)"))
+            actionError = "Failed to add shopping item: \(error.localizedDescription)"
         }
     }
 
@@ -61,7 +62,7 @@ final class ShoppingListStore {
             let dtos = try await ShoppingListAPI.fetchAggregated(token: token)
             itemsState = .loaded(dtos.map { $0.toDomain() })
         } catch {
-            itemsState = .failed(.serverMessage("Failed to update shopping item: \(error.localizedDescription)"))
+            actionError = "Failed to update shopping item: \(error.localizedDescription)"
         }
     }
 
@@ -74,7 +75,7 @@ final class ShoppingListStore {
             let dtos = try await ShoppingListAPI.fetchAggregated(token: token)
             itemsState = .loaded(dtos.map { $0.toDomain() })
         } catch {
-            itemsState = .failed(.serverMessage("Failed to complete shopping item: \(error.localizedDescription)"))
+            actionError = "Failed to complete shopping item: \(error.localizedDescription)"
         }
     }
 
@@ -87,7 +88,7 @@ final class ShoppingListStore {
             let dtos = try await ShoppingListAPI.fetchAggregated(token: token)
             itemsState = .loaded(dtos.map { $0.toDomain() })
         } catch {
-            itemsState = .failed(.serverMessage("Failed to delete shopping item: \(error.localizedDescription)"))
+            actionError = "Failed to delete shopping item: \(error.localizedDescription)"
         }
     }
 

@@ -120,9 +120,18 @@ final class AuthStore {
     func signup(username: String, email: String, password: String, passwordRepeat: String) async throws -> String {
         guard !username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               !email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              !password.isEmpty else { throw AuthError.invalidInput }
-        guard email.contains("@") else { throw AuthError.invalidEmail }
-        guard password == passwordRepeat else { throw AuthError.passwordMismatch }
+              !password.isEmpty else {
+            formState = .failed(.serverMessage("Please fill in all fields"))
+            throw AuthError.invalidInput
+        }
+        guard email.contains("@") else {
+            formState = .failed(.serverMessage("Please enter a valid email address"))
+            throw AuthError.invalidEmail
+        }
+        guard password == passwordRepeat else {
+            formState = .failed(.serverMessage("Passwords do not match"))
+            throw AuthError.passwordMismatch
+        }
 
         formState = .loading
         do {
