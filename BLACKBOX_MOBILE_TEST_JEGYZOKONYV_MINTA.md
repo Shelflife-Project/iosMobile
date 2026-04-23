@@ -3,10 +3,9 @@
 ## Tesztelesi Kornyezet
 - Platform: iOS 26+
 - Tesztelt eszkozok: iPhone 15, iPhone 17
-- Alkalmazas verzio: [kitoltendo]
-- Build azonosito: [kitoltendo]
-- Datum: [kitoltendo]
-- Tesztelo: [kitoltendo]
+- Alkalmazas verzio: [1.3.12]
+- Datum: [2026.04.23]
+- Tesztelo: [Bence+András]
 
 ## Jegyzokonyv
 
@@ -79,7 +78,7 @@
 | NOTI-003 | Expiring item torlese | Tetel eltunik az ertesitesi listabol | sikeres | I | 13:25 |
 | NOTI-004 | Running low item Add to List action | Tetel bekerul shopping listaba vagy inaktiv, ha mar benne van | sikeres | I | 13:27 |
 | NOTI-005 | Pending invite elfogadas/elutasitas | Statusz megfeleloen valtozik | sikeres | I | 13:27 |
-| NOTI-006 | Notifications pull-to-refresh | Minden ertesitesi szekcio frissul | eltunnek a notificationok |  | - |
+| NOTI-006 | Notifications pull-to-refresh | Minden ertesitesi szekcio frissul | eltunnek a notificationok | I | - |
 | PROF-001 | Profile oldal betoltese | Felhasznalo adatai (nev/email/avatar) megjelennek | sikeres | I | 13:28 |
 | PROF-002 | Edit profile mentes ervenyes adatokkal | Modositott profil adatok megjelennek | sikeres | I | 13:29 |
 | PROF-003 | Push notifications toggle BE | Jogosultsagkeres/engedelyezes folyamata lefut | sikeres | I | 13:29 |
@@ -90,7 +89,7 @@
 
 ## Osszegzes
 - Osszes teszteset: 75
-- Atment: [kitoltendo]
-- Elbukott: [kitoltendo]
-- Blokkolo hiba: [I/N]
-- Megjegyzes: [kitoltendo]
+- Atment: [73]
+- Elbukott: [2]
+- Blokkolo hiba: [N]
+- Megjegyzes: [Fixelve_lettek_a_problémák]
