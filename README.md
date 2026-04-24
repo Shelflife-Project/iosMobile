@@ -23,9 +23,11 @@ The iOS app is now organized by domain under `shelfapp/Domains/`.
 
 Each domain uses the same pattern:
 
-- `Store/` source-of-truth observable store (`@Observable`) for domain data and server sync
+- `Store/` source-of-truth observable store (`@Observable`) and domain models
 - `Page/` page file with **ViewModel at the top** and the SwiftUI page view below it
 - `Components/` reusable subviews for that domain
+- `Utils/API/` domain API protocol + default implementation + domain HTTP client wrapper
+- `Utils/DTO/` backend DTO mapping types
 
 ### Domain map
 
@@ -33,6 +35,9 @@ Each domain uses the same pattern:
 	- `Store/AuthStore.swift`
 	- `Page/RootPage.swift`, `Page/AuthPage.swift`
 	- `Components/LoginFormView.swift`, `Components/SignupFormView.swift`
+	- `Utils/API/AuthAPI.swift`, `Utils/API/DefaultAuthAPI.swift`
+	- `Utils/API/AuthHTTPClient.swift`
+	- `Utils/DTO/AuthLoginDTO.swift`, `Utils/DTO/AuthSignupDTO.swift`, `Utils/DTO/UserAuthDTO.swift`
 - `Domains/Home/`
 	- `Page/HomePage.swift`
 	- `Components/StatCard.swift`
@@ -40,25 +45,41 @@ Each domain uses the same pattern:
 	- `Store/ProductsStore.swift`
 	- `Page/ProductsPage.swift`
 	- `Components/` product list/sheets/scanner
+	- `Utils/API/ProductAPI.swift`
+	- `Utils/API/ProductsHTTPClient.swift`
+	- `Utils/DTO/ProductDTO.swift`
 - `Domains/Storages/`
 	- `Store/StorageStore.swift`
 	- `Page/StoragesPage.swift`
 	- `Components/` storage row/create/edit
+	- `Utils/API/StorageAPI.swift`
+	- `Utils/API/StoragesHTTPClient.swift`
+	- `Utils/DTO/StorageDTO.swift`
 - `Domains/ShoppingList/`
 	- `Store/ShoppingListStore.swift`
 	- `Page/ShoppingListPage.swift`
+	- `Utils/API/ShoppingListAPI.swift`
+	- `Utils/API/ShoppingListHTTPClient.swift`
+	- `Utils/DTO/ShoppingListItemDTO.swift`
 - `Domains/Notifications/`
 	- `Store/NotificationsStore.swift`
 	- `Page/NotificationsPage.swift`
-	- `Components/InviteNotificationRow.swift`
+	- `Utils/API/NotificationsAPI.swift`
+	- `Utils/API/NotificationsHTTPClient.swift`
+	- `Utils/DTO/NotificationsDTO.swift`
 - `Domains/Profile/`
 	- `Store/ProfileStore.swift`
 	- `Page/ProfilePage.swift`
 	- `Components/` account/settings/edit
+	- `Utils/API/ProfileAPI.swift`
+	- `Utils/API/ProfileHTTPClient.swift`
 - `Domains/StorageDetail/`
 	- `Store/StorageDetailStore.swift`
 	- `Page/StorageDetailPage.swift`
 	- `Components/` item/member/invite/running-low sheets
+	- `Utils/API/StorageDetailAPI.swift`
+	- `Utils/API/StorageDetailHTTPClient.swift`
+	- `Utils/DTO/StorageDetailDTOs.swift`
 - `Domains/Shared/Components/`
 	- shared UI components used across domains
 - `Domains/Shared/APIError.swift`
@@ -67,18 +88,20 @@ Each domain uses the same pattern:
 	- shared DTO wrappers, paginated response models, and `ResourceURLBuilder`
 
 Domain-specific APIs:
-- `Domains/Auth/Store/AuthAPI.swift`
+- `Domains/Auth/Utils/API/AuthAPI.swift`
 	- login, signup, me (fetch current user), logout
-- `Domains/Products/Store/ProductAPI.swift`
+- `Domains/Products/Utils/API/ProductAPI.swift`
 	- fetch/create/update/delete products, categories
-- `Domains/Storages/Store/StorageAPI.swift`
+- `Domains/Storages/Utils/API/StorageAPI.swift`
 	- fetch/create/update/delete storages, pagination
-- `Domains/ShoppingList/Store/ShoppingListAPI.swift`
+- `Domains/ShoppingList/Utils/API/ShoppingListAPI.swift`
 	- fetch/add/update/delete/complete shopping items
-- `Domains/StorageDetail/Store/StorageDetailAPI.swift`
+- `Domains/StorageDetail/Utils/API/StorageDetailAPI.swift`
 	- storage items, members, invites, running-low settings
-- `Domains/Notifications/Store/NotificationsAPI.swift`
+- `Domains/Notifications/Utils/API/NotificationsAPI.swift`
 	- pending invites, running-low notifications, expiring items
+- `Domains/Profile/Utils/API/ProfileAPI.swift`
+	- profile update and profile picture upload
 
 Cross-domain infra stays in:
 
@@ -102,16 +125,17 @@ In short:
 
 ## API Architecture
 
-All domain API operations are built on **Endpoint + HTTPClient**:
+All domain API operations are built on **Endpoint + domain HTTP client wrappers + DefaultHTTPClient**:
 
 - **Endpoint** (`Protocols/Endpoint.swift`) = typed route, method, query and body definitions
-- **DefaultHTTPClient** (`Protocols/DefaultHTTPClient.swift`) = request building + headers + status mapping + decoding
-- **Domain APIs** (`{Domain}API.swift`) = feature-scoped protocol + implementation that maps DTOs to domain models
+- **DefaultHTTPClient** (`Protocols/DefaultHTTPClient.swift`) = shared request building + headers + status mapping + decoding
+- **Domain HTTP clients** (`Domains/{Domain}/Utils/API/*HTTPClient.swift`) = feature-scoped wrappers that delegate to `DefaultHTTPClient`
+- **Domain APIs** (`Domains/{Domain}/Utils/API/*.swift`) = feature-scoped protocol + implementation that maps DTOs to domain models
 - **AuthService** = token persistence bridge (Keychain only), while `AuthStore` owns runtime token state
 
 Pattern:
 ```
-Page → Store → DomainAPI → HTTPClient.request(Endpoint) → APIError handling
+Page → Store → DomainAPI → DomainHTTPClient → DefaultHTTPClient → APIError handling
 ```
 
 Auth flow:
