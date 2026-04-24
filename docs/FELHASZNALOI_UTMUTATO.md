@@ -61,10 +61,11 @@ This is the first screen that appears when you open the app.
 
 ---
 
-### Képek / Screenshots
+### Képernyőképek / Screenshots
 
-<!-- SCREENSHOT: Auth oldal — Login fül -->
-<!-- SCREENSHOT: Auth oldal — Sign Up fül kitöltve -->
+| Login | Sign Up |
+|-------|---------|
+| ![Login képernyő](./Login.png) | ![Regisztrációs képernyő](./Register.png) |
 
 ---
 
@@ -102,10 +103,9 @@ Three cards are shown one below the other:
 
 ---
 
-### Képek / Screenshots
+### Képernyőképek / Screenshots
 
-<!-- SCREENSHOT: Főoldal — három kártya látható -->
-<!-- VIDEO: Pull-to-refresh animáció -->
+![Főoldal – három statisztikai kártya](./HomePage1.png)
 
 ---
 
@@ -173,12 +173,11 @@ Storages are grouped into two sections:
 
 ---
 
-### Képek / Screenshots
+### Képernyőképek / Screenshots
 
-<!-- SCREENSHOT: Tárolók oldal — saját és megosztott tárolók listája -->
-<!-- VIDEO: Swipe bal — Edit és Delete gombok megjelenése -->
-<!-- SCREENSHOT: Új tároló létrehozása panel -->
-<!-- SCREENSHOT: Lapozási beállítások panel -->
+| Tárolók listája | Keresés | Swipe műveletek | Új tároló |
+|-----------------|---------|-----------------|-----------|
+| ![Tárolók listája](./Storage.png) | ![Keresés](./StorageSearch.png) | ![Swipe műveletek](./StorageAction.png) | ![Új tároló létrehozása](./StorageCreate.png) |
 
 ---
 
@@ -250,13 +249,15 @@ Tap the **+ circle** to open the menu:
 
 ---
 
-### Képek / Screenshots
+### Képernyőképek / Screenshots
 
-<!-- SCREENSHOT: Tároló részletek — fejléc és tételek listája -->
-<!-- VIDEO: Swipe bal egy tételen — Delete, Add to List, Set Alert gombok -->
-<!-- SCREENSHOT: Riasztás beállítása panel (Set Running Low) -->
-<!-- SCREENSHOT: Tag meghívása panel -->
-<!-- SCREENSHOT: Menü gomb lenyitva -->
+| Tároló részletei | Menü | Tétel hozzáadása |
+|------------------|------|------------------|
+| ![Tároló részletei](./Storage[id].png) | ![Menü gombok](./Storage[id]Actions.png) | ![Tétel hozzáadása](./Storage[id]AddItem.png) |
+
+| Tétel swipe műveletek | Riasztás beállítása | Tag meghívása | Függő meghívás |
+|-----------------------|---------------------|---------------|----------------|
+| ![Tétel swipe](./Storage[id]ItemActions.png) | ![Riasztás beállítása](./Storage[id]ItemSetAlert.png) | ![Tag meghívása](./Storage[id]Invite.png) | ![Függő meghívás](./Storage[id]PendingIvite.png) |
 
 ---
 
@@ -336,12 +337,11 @@ Products are grouped into two sections:
 
 ---
 
-### Képek / Screenshots
+### Képernyőképek / Screenshots
 
-<!-- SCREENSHOT: Termékek oldal — saját és globális termékek listája -->
-<!-- VIDEO: Swipe bal — Edit és Delete gombok -->
-<!-- SCREENSHOT: Új termék létrehozása panel -->
-<!-- SCREENSHOT: Szűrő és lapozási beállítások panel -->
+| Termékek listája | Swipe műveletek | Új termék létrehozása |
+|------------------|-----------------|-----------------------|
+| ![Termékek listája](./Product.png) | ![Swipe műveletek](./ProductAction.png) | ![Új termék](./ProductCreate.png) |
 
 ---
 
@@ -415,11 +415,11 @@ Each item shows:
 
 ---
 
-### Képek / Screenshots
+### Képernyőképek / Screenshots
 
-<!-- SCREENSHOT: Bevásárlólista — tételek listája mennyiség gombokkal -->
-<!-- VIDEO: Swipe bal — Done és Delete gombok -->
-<!-- SCREENSHOT: Új tétel hozzáadása panel -->
+| Bevásárlólista | Swipe műveletek |
+|----------------|-----------------|
+| ![Bevásárlólista](./Shopping.png) | ![Swipe műveletek](./ShoppingAction.png) |
 
 ---
 
@@ -491,11 +491,25 @@ The Notifications page can show three types of alerts.
 
 ---
 
-### Képek / Screenshots
+### Képernyőképek / Screenshots
 
-<!-- SCREENSHOT: Értesítések oldal — mindhárom szekció látható -->
-<!-- VIDEO: Swipe bal — Add to List gomb lejáró terméknél -->
-<!-- SCREENSHOT: Tároló meghívás elfogadása / elutasítása -->
+**Lejárt termékek / Expired Items**
+
+| Lista | Swipe műveletek |
+|-------|-----------------|
+| ![Lejárt termékek](./NotificationExpired.png) | ![Lejárt termék műveletek](./NotificationExpiredAction.png) |
+
+**Kevés készlet / Running Low**
+
+| Lista | Swipe műveletek | Megerősítés |
+|-------|-----------------|-------------|
+| ![Kevés készlet](./NotificationRunningLow.png) | ![Kevés készlet műveletek](./NotificationRunningLowAction.png) | ![Megerősítés](./NotificationRunningLowActionSafeGuard.png) |
+
+**Tároló meghívások / Storage Invitations**
+
+| Meghívás | Elfogadás / Elutasítás |
+|----------|------------------------|
+| ![Tároló meghívás](./NotificationStorageInvite.png) | ![Meghívás műveletek](./NotificationStorageInviteAction.png) |
 
 ---
 
@@ -555,11 +569,11 @@ The Profile page lets you manage your account and app settings.
 
 ---
 
-### Képek / Screenshots
+### Képernyőképek / Screenshots
 
-<!-- SCREENSHOT: Profil oldal — profilkép, adatok és beállítások -->
-<!-- SCREENSHOT: Profil szerkesztése panel — felhasználónév és képfeltöltés -->
-<!-- VIDEO: Dark mode bekapcsolása -->
+| Profil oldal | Profil szerkesztése | Light Mode |
+|--------------|---------------------|------------|
+| ![Profil](./Profile.png) | ![Profil szerkesztése](./ProfileEdit.png) | ![Light Mode](./LightMode.png) |
 
 ---
 

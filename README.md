@@ -22,7 +22,7 @@ A **ShelfLife** egy háztartási készletkezelő rendszer. Az iOS alkalmazás le
 
 | Komponens | Minimum verzió |
 |-----------|---------------|
-| iOS | 17.0 |
+| iOS | 26.0 |
 | Xcode | 16.0+ |
 | Swift | 5.9+ |
 | Backend (Java) | 21+ |
@@ -76,6 +76,17 @@ open shelfapp/shelfapp.xcodeproj
 ```
 
 A backend URL beállítása: `shelfapp/Utilities/AppConfig.swift`
+
+---
+
+### Dokumentáció / Documentation
+
+A `docs/` mappa tartalmazza az összes képernyőképet és a részletes dokumentációt:
+
+| Dokumentum | Leírás |
+|------------|--------|
+| [Felhasználói Útmutató](docs/FELHASZNALOI_UTMUTATO.md) | Képernyőképekkel illusztrált felhasználói kézikönyv (Magyar / English) |
+| [Blackbox Tesztelési Jegyzőkönyv](docs/BLACKBOX_MOBILE_TEST_JEGYZOKONYV.md) | Feketedobozos mobil tesztelési eredmények |
 
 ---
 
@@ -153,6 +164,17 @@ open shelfapp/shelfapp.xcodeproj
 ```
 
 Backend URL configuration: `shelfapp/Utilities/AppConfig.swift`
+
+---
+
+### Documentation
+
+The `docs/` folder contains all screenshots and detailed documentation:
+
+| Document | Description |
+|----------|-------------|
+| [User Guide](docs/FELHASZNALOI_UTMUTATO.md) | Illustrated user manual with screenshots (Magyar / English) |
+| [Blackbox Test Report](docs/BLACKBOX_MOBILE_TEST_JEGYZOKONYV.md) | Mobile black-box test results |
 
 ---
 
