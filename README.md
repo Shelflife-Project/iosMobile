@@ -22,7 +22,7 @@ A **ShelfLife** egy háztartási készletkezelő rendszer. Az iOS alkalmazás le
 
 | Komponens | Minimum verzió |
 |-----------|---------------|
-| iOS | 17.0 |
+| iOS | 26.0 |
 | Xcode | 16.0+ |
 | Swift | 5.9+ |
 | Backend (Java) | 21+ |
