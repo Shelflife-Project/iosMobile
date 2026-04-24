@@ -1,208 +1,209 @@
-# ShelfApp (iOS)
+# ShelfApp – iOS
 
-Native iOS client for ShelfLife, built with SwiftUI. The app mirrors backend and web functionality for storages, products, shopping lists, invites, running-low, and expiry notifications.
+> **Magyar** | [English](#english)
 
-## Requirements
+---
 
-- Xcode 16+
-- iOS 17+ simulator/device
-- Running backend (`Backend/` project)
+## Magyar
 
-## Setup
+### Mi ez az alkalmazás?
 
-1. Start backend API (`http://localhost:8080` by default).
-2. Open `shelfapp.xcodeproj`.
-3. Verify backend URL in `shelfapp/Utilities/AppConfig.swift`.
-4. Build and run (`⌘R`).
+A **ShelfLife** egy háztartási készletkezelő rendszer. Az iOS alkalmazás lehetővé teszi, hogy:
 
-For physical devices, use your machine LAN IP in `AppConfig.baseURL`.
+- Nyomon kövesd a tárolt tárgyakat (hűtő, kamra, stb.)
+- Figyelemmel kísérd a lejárati dátumokat és kapj értesítést a hamarosan lejáró termékekről
+- Kezelj megosztott tárhelyeket más felhasználókkal (meghívók, tagkezelés)
+- Automatikusan generált bevásárlólistát használj a fogyóban lévő termékek alapján
+- Értesítéseket kapj a fogyóban lévő és hamarosan lejáró termékekről
+
+---
+
+### Rendszerkövetelmények
+
+| Komponens | Minimum verzió |
+|-----------|---------------|
+| iOS | 17.0 |
+| Xcode | 16.0+ |
+| Swift | 5.9+ |
+| Backend (Java) | 21+ |
+| MySQL | 8.0 |
+
+A backend alapértelmezés szerint `http://localhost:8080` címen fut. Fizikai eszköz esetén a LAN IP-t kell megadni az `AppConfig.swift` fájlban.
+
+---
+
+### Az IPA telepítése (`shelfapp-unsigned.ipa`)
+
+Az IPA fájl aláírás nélküli – **csak fejlesztői célra** készült, nem tölthető fel az App Store-ba.
+
+#### 1. lehetőség – AltStore (ajánlott)
+
+1. Telepítsd az [AltStore](https://altstore.io)-t a számítógépedre és az iPhone-ra.
+2. Csatlakoztasd az iPhone-t USB-vel.
+3. Nyisd meg az AltStore-t az iPhone-on → **My Apps** → **+** gomb.
+4. Válaszd ki a `shelfapp-unsigned.ipa` fájlt.
+5. Az AltStore saját Apple ID-vel aláírja és telepíti.
+6. Az alkalmazás 7 napig érvényes; az AltStore automatikusan megújítja, ha Wi-Fi-n csatlakozol.
+
+#### 2. lehetőség – Xcode (fejlesztői gép)
+
+1. Csatlakoztasd az iPhone-t USB-vel, és bízd meg a számítógépedet az eszközön.
+2. Nyisd meg a `shelfapp.xcodeproj` fájlt Xcode-ban.
+3. A **Signing & Capabilities** fülön válaszd ki a saját csapatodat (személyes Apple ID is megfelelő).
+4. Válaszd ki az eszközt a célként, majd nyomd meg a **▶ Run** gombot (`⌘R`).
+
+#### 3. lehetőség – Apple Configurator 2 (macOS)
+
+1. Telepítsd az **Apple Configurator 2** alkalmazást a Mac App Store-ból.
+2. Csatlakoztasd az iPhone-t USB-vel.
+3. Húzd rá az IPA fájlt az eszközre az Apple Configurator ablakában.
+4. Fogadd el a telepítési kérelmet az iPhone-on.
+
+> **Megjegyzés:** Aláíratlan IPA-t csak fejlesztői módban lévő, vagy jailbreakelt eszközre lehet közvetlenül telepíteni. Normál készülékeken az AltStore vagy Xcode aláírása szükséges.
+
+---
+
+### Fejlesztői indítás (forráskódból)
+
+```bash
+# Backend elindítása
+cd Backend
+./mvnw spring-boot:run
+
+# iOS app megnyitása
+open shelfapp/shelfapp.xcodeproj
+# Majd ⌘R a Xcode-ban
+```
+
+A backend URL beállítása: `shelfapp/Utilities/AppConfig.swift`
+
+---
+
+---
+
+## English
+
+### What is this app?
+
+**ShelfLife** is a household inventory management system. The iOS app lets you:
+
+- Track items across physical storage locations (fridge, pantry, etc.)
+- Monitor expiration dates and receive notifications for soon-to-expire products
+- Manage shared storages with other users (invitations, member management)
+- Use an auto-generated shopping list based on low-stock items
+- Get notified about items running low or about to expire
+
+---
+
+### System Requirements
+
+| Component | Minimum Version |
+|-----------|----------------|
+| iOS | 17.0 |
+| Xcode | 16.0+ |
+| Swift | 5.9+ |
+| Backend (Java) | 21+ |
+| MySQL | 8.0 |
+
+The backend runs at `http://localhost:8080` by default. For physical devices, set your LAN IP in `AppConfig.swift`.
+
+---
+
+### Installing the IPA (`shelfapp-unsigned.ipa`)
+
+The IPA is unsigned — it is **for development use only** and cannot be submitted to the App Store.
+
+#### Option 1 – AltStore (recommended)
+
+1. Install [AltStore](https://altstore.io) on your Mac and iPhone.
+2. Connect your iPhone via USB.
+3. Open AltStore on the iPhone → **My Apps** → tap **+**.
+4. Select `shelfapp-unsigned.ipa`.
+5. AltStore signs and installs it using your Apple ID.
+6. The app is valid for 7 days; AltStore auto-renews it when the iPhone is on the same Wi-Fi as your Mac.
+
+#### Option 2 – Xcode (developer machine)
+
+1. Connect your iPhone via USB and trust the computer on the device.
+2. Open `shelfapp.xcodeproj` in Xcode.
+3. Under **Signing & Capabilities**, select your team (a personal Apple ID works).
+4. Choose your device as the run destination and press **▶ Run** (`⌘R`).
+
+#### Option 3 – Apple Configurator 2 (macOS)
+
+1. Install **Apple Configurator 2** from the Mac App Store.
+2. Connect your iPhone via USB.
+3. Drag the IPA file onto the device in Apple Configurator's window.
+4. Accept the installation prompt on the iPhone.
+
+> **Note:** Unsigned IPAs can only be installed directly on developer-mode or jailbroken devices. On a standard device, AltStore or Xcode signing is required.
+
+---
+
+### Running from Source
+
+```bash
+# Start the backend
+cd Backend
+./mvnw spring-boot:run
+
+# Open the iOS project
+open shelfapp/shelfapp.xcodeproj
+# Then press ⌘R in Xcode
+```
+
+Backend URL configuration: `shelfapp/Utilities/AppConfig.swift`
+
+---
 
 ## App Structure (Domain-first)
 
-The iOS app is now organized by domain under `shelfapp/Domains/`.
+The iOS app is organized by domain under `shelfapp/Domains/`.
 
-Each domain uses the same pattern:
+Each domain follows the same pattern:
 
-- `Store/` source-of-truth observable store (`@Observable`) and domain models
-- `Page/` page file with **ViewModel at the top** and the SwiftUI page view below it
-- `Components/` reusable subviews for that domain
-- `Utils/API/` domain API protocol + default implementation + domain HTTP client wrapper
-- `Utils/DTO/` backend DTO mapping types
+- `Store/` — source-of-truth observable store (`@Observable`) and domain models
+- `Page/` — page file with **ViewModel at the top** and the SwiftUI view below it
+- `Components/` — reusable subviews for that domain
+- `Utils/API/` — domain API protocol + default implementation + HTTP client wrapper
+- `Utils/DTO/` — backend DTO mapping types
 
 ### Domain map
 
-- `Domains/Auth/`
-	- `Store/AuthStore.swift`
-	- `Page/RootPage.swift`, `Page/AuthPage.swift`
-	- `Components/LoginFormView.swift`, `Components/SignupFormView.swift`
-	- `Utils/API/AuthAPI.swift`, `Utils/API/DefaultAuthAPI.swift`
-	- `Utils/API/AuthHTTPClient.swift`
-	- `Utils/DTO/AuthLoginDTO.swift`, `Utils/DTO/AuthSignupDTO.swift`, `Utils/DTO/UserAuthDTO.swift`
-- `Domains/Home/`
-	- `Page/HomePage.swift`
-	- `Components/StatCard.swift`
-- `Domains/Products/`
-	- `Store/ProductsStore.swift`
-	- `Page/ProductsPage.swift`
-	- `Components/` product list/sheets/scanner
-	- `Utils/API/ProductAPI.swift`
-	- `Utils/API/ProductsHTTPClient.swift`
-	- `Utils/DTO/ProductDTO.swift`
-- `Domains/Storages/`
-	- `Store/StorageStore.swift`
-	- `Page/StoragesPage.swift`
-	- `Components/` storage row/create/edit
-	- `Utils/API/StorageAPI.swift`
-	- `Utils/API/StoragesHTTPClient.swift`
-	- `Utils/DTO/StorageDTO.swift`
-- `Domains/ShoppingList/`
-	- `Store/ShoppingListStore.swift`
-	- `Page/ShoppingListPage.swift`
-	- `Utils/API/ShoppingListAPI.swift`
-	- `Utils/API/ShoppingListHTTPClient.swift`
-	- `Utils/DTO/ShoppingListItemDTO.swift`
-- `Domains/Notifications/`
-	- `Store/NotificationsStore.swift`
-	- `Page/NotificationsPage.swift`
-	- `Utils/API/NotificationsAPI.swift`
-	- `Utils/API/NotificationsHTTPClient.swift`
-	- `Utils/DTO/NotificationsDTO.swift`
-- `Domains/Profile/`
-	- `Store/ProfileStore.swift`
-	- `Page/ProfilePage.swift`
-	- `Components/` account/settings/edit
-	- `Utils/API/ProfileAPI.swift`
-	- `Utils/API/ProfileHTTPClient.swift`
-- `Domains/StorageDetail/`
-	- `Store/StorageDetailStore.swift`
-	- `Page/StorageDetailPage.swift`
-	- `Components/` item/member/invite/running-low sheets
-	- `Utils/API/StorageDetailAPI.swift`
-	- `Utils/API/StorageDetailHTTPClient.swift`
-	- `Utils/DTO/StorageDetailDTOs.swift`
-- `Domains/Shared/Components/`
-	- shared UI components used across domains
-- `Domains/Shared/APIError.swift`
-	- centralized error enum for all API operations
-- `Domains/Shared/SharedTypes.swift`
-	- shared DTO wrappers, paginated response models, and `ResourceURLBuilder`
+- `Domains/Auth/` — login, signup, session restore, logout
+- `Domains/Home/` — dashboard with inventory stats
+- `Domains/Products/` — product list, search, create/edit/delete, barcode scanner
+- `Domains/Storages/` — storage list, create/edit/delete, pagination
+- `Domains/StorageDetail/` — items, members, invites, running-low settings
+- `Domains/ShoppingList/` — aggregated shopping list, amount edits, done/delete
+- `Domains/Notifications/` — pending invites, running-low, about-to-expire
+- `Domains/Profile/` — profile update, profile picture upload
+- `Domains/Shared/` — shared UI components, error types, shared DTO wrappers
 
-Domain-specific APIs:
-- `Domains/Auth/Utils/API/AuthAPI.swift`
-	- login, signup, me (fetch current user), logout
-- `Domains/Products/Utils/API/ProductAPI.swift`
-	- fetch/create/update/delete products, categories
-- `Domains/Storages/Utils/API/StorageAPI.swift`
-	- fetch/create/update/delete storages, pagination
-- `Domains/ShoppingList/Utils/API/ShoppingListAPI.swift`
-	- fetch/add/update/delete/complete shopping items
-- `Domains/StorageDetail/Utils/API/StorageDetailAPI.swift`
-	- storage items, members, invites, running-low settings
-- `Domains/Notifications/Utils/API/NotificationsAPI.swift`
-	- pending invites, running-low notifications, expiring items
-- `Domains/Profile/Utils/API/ProfileAPI.swift`
-	- profile update and profile picture upload
+Cross-domain infrastructure:
 
-Cross-domain infra stays in:
-
-- `shelfapp/Services/AuthService.swift` (secure token persistence, session bridge)
-- `shelfapp/Services/LocalNotificationService.swift` (push notifications)
-- `shelfapp/Utilities/` (config/date/navigation/image helpers)
-- `shelfapp/Domains/Profile/Store/User.swift` (shared domain model)
+- `shelfapp/Services/AuthService.swift` — secure token persistence (Keychain)
+- `shelfapp/Services/LocalNotificationService.swift` — push notifications
+- `shelfapp/Utilities/` — config, date, navigation, image helpers
 
 ## State Flow
 
-- Store owns domain state.
-- ViewModel does not duplicate domain entities; it coordinates user actions and view-only state.
-- Page reads from VM/store and renders.
-
-In short:
-
-1. Page event → VM method
-2. VM calls Store async API operation
-3. Store mutates observable state
-4. SwiftUI re-renders automatically
-
-## API Architecture
-
-All domain API operations are built on **Endpoint + domain HTTP client wrappers + DefaultHTTPClient**:
-
-- **Endpoint** (`Protocols/Endpoint.swift`) = typed route, method, query and body definitions
-- **DefaultHTTPClient** (`Protocols/DefaultHTTPClient.swift`) = shared request building + headers + status mapping + decoding
-- **Domain HTTP clients** (`Domains/{Domain}/Utils/API/*HTTPClient.swift`) = feature-scoped wrappers that delegate to `DefaultHTTPClient`
-- **Domain APIs** (`Domains/{Domain}/Utils/API/*.swift`) = feature-scoped protocol + implementation that maps DTOs to domain models
-- **AuthService** = token persistence bridge (Keychain only), while `AuthStore` owns runtime token state
-
-Pattern:
 ```
-Page → Store → DomainAPI → DomainHTTPClient → DefaultHTTPClient → APIError handling
+Page event → VM method → Store async operation → observable state mutation → SwiftUI re-render
 ```
 
-Auth flow:
-```
-AuthStore.login() → AuthAPI.login() → token stored in AuthStore + persisted via AuthService
-```
-
-## Error & Loading Handling
-
-- Every domain store exposes `isLoading` and `errorMessage`.
-- Every page binds UI feedback from store state:
-	- loading spinners for long-running operations
-	- domain-scoped error alerts
-- Errors are reset after alert dismissal to avoid stale error banners.
-
-This keeps network error handling consistent across all domains.
-
-## Functionalities
-
-- Authentication: signup, login, logout, session restore (`/api/auth/me`)
-- Storages: list/search/paginate, create, edit, delete
-- Products: list/search/paginate, create, edit, delete
-- Storage detail: items, members, invite handling, running-low settings
-- Shopping list: aggregated shopping list, amount edits, done/delete actions
-- Notifications: invites + running-low + about-to-expire
-- Badge logic: invites + unresolved running-low
-- Images: product/user small icon endpoints for fast list rendering
-
-## API Endpoints Used by iOS
-
-- Auth: `/api/auth/*`
-- Storages: `/api/storages`, `/api/storages/{id}`
-- Storage items: `/api/storages/{id}/items`
-- Members + invites: `/api/storages/{id}/members`, `/api/storages/invites`
-- Products: `/api/products`, `/api/products/{id}/icon/small`
-- Shopping list: `/api/shoppinglist`, `/api/storages/{id}/shoppinglist`
-- Running low: `/api/runninglow`, `/api/storages/{id}/runninglow`, `/api/storages/{id}/runninglowsettings`
-- Expiration: `/api/abouttoexpire`, `/api/expired`
+Every domain store exposes `isLoading: Bool` and `errorMessage: String?`; pages bind these to loading spinners and alert views.
 
 ## Testing
 
-### Unit tests
-
-Tests are reorganized by domain in `shelfappTests/`:
-
-- `shelfappTests/Auth/`
-- `shelfappTests/Core/`
-- `shelfappTests/DTO/`
-- `shelfappTests/Services/`
-- `shelfappTests/Utilities/`
-
-They are written with Swift Testing (`@Test`, `#expect`).
-
-Run:
-
 ```bash
-xcodebuild -scheme shelfapp -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test -only-testing:shelfappTests
+# Unit tests
+xcodebuild -scheme shelfapp \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+  test -only-testing:shelfappTests
+
+# UI tests
+xcodebuild -scheme shelfapp \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+  test -only-testing:shelfappUITests
 ```
-
-### UI tests
-
-Located in `shelfappUITests/` and written with XCUITest.
-
-Run:
-
-```bash
-xcodebuild -scheme shelfapp -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test -only-testing:shelfappUITests
-```
-
-Authenticated UI flows expect test credentials to exist on the backend.
